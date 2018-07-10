@@ -1,8 +1,12 @@
+extern crate hanbaiki;
+
 use std::io;
 use std::io::{Write, Read};
 use std::collections::HashMap;
 
 use std::net::TcpListener;
+
+use hanbaiki::RespWriter;
 
 fn main() {
     let mut data = HashMap::new();
@@ -42,36 +46,37 @@ fn process_command(data: &mut HashMap<String, Vec<u8>>, command: &str) -> String
 
         "SET" if v.len() == 3 => {
             data.insert(v[1].to_string(), v[2].as_bytes().to_vec());
-            "OK".to_string()
+            RespWriter::to_simple_string("OK").unwrap()
         },
 
 
         "GET" if v.len() == 2 => {
             if let Some(value) = data.get(v[1]) {
-                String::from_utf8_lossy(value).into_owned()
+                let value = String::from_utf8_lossy(value).into_owned();
+                RespWriter::to_bulk_string(&value)
             } else {
-                "ERROR: KEY NOT FOUND".to_string()
+                RespWriter::to_error("ERROR: Key not found").unwrap()
             }
         },
 
         "DELETE" if v.len() == 2 => {
             if let Some(_) = data.remove(v[1]) {
-                "OK".to_string()
+                RespWriter::to_simple_string("OK").unwrap()
             } else {
-                "ERROR: KEY NOT FOUND".to_string()
+                RespWriter::to_error("ERROR: Key not found").unwrap()
             }
         },
 
         "EXISTS" if v.len() == 2 => {
             if data.contains_key(v[1]) {
-                "1".to_string()
+                RespWriter::to_integer(1)
             } else {
-                "0".to_string()
+                RespWriter::to_integer(0)
             }
         },
 
         _ => {
-            "Command not recognized. Try again".to_string()
+            RespWriter::to_error("ERROR: Command not recognized").unwrap()
         },
     }
 }
