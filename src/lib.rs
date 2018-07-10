@@ -16,8 +16,8 @@ impl RespWriter {
             return Err("Contains CRLF".to_string());
         }
 
-        let m = format!("{}{}\r\n", prefix, s);
-        Ok(m)
+        let msg = format!("{}{}\r\n", prefix, s);
+        Ok(msg)
     }
 
     pub fn to_integer(i: usize) -> String {
@@ -30,6 +30,16 @@ impl RespWriter {
 
     pub fn null_bulk_string() -> String {
         "$-1\r\n".to_string()
+    }
+
+    pub fn to_array(strings: &[&str]) -> String {
+
+        let mut msg = format!("*{}\r\n", strings.len());
+
+        for s in strings {
+            msg.push_str(&RespWriter::to_bulk_string(s));
+        }
+        msg
     }
 }
 
@@ -45,7 +55,7 @@ mod test {
     }
 
     #[test]
-    pub fn check_simple_error() {
+    pub fn check_error() {
         assert_eq!("-ERR\r\n", RespWriter::to_error("ERR").unwrap());
         assert!(RespWriter::to_error("PONG\r\n...").is_err());
     }
@@ -67,4 +77,11 @@ mod test {
     pub fn check_null_bulk_string() {
         assert_eq!("$-1\r\n", RespWriter::null_bulk_string());
     }
+
+    #[test]
+    pub fn check_array() {
+        let v = vec!["foo", "bar"];
+        assert_eq!("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n", RespWriter::to_array(&v));
+    }
+
 }
