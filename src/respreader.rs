@@ -1,5 +1,6 @@
 use std::net::TcpStream;
 use std::io::Read;
+use std::str;
 
 #[derive(Debug)]
 pub struct RespReader {
@@ -11,7 +12,7 @@ impl RespReader {
         RespReader { message: vec![] }
     }
 
-    pub fn frame_message(&mut self, mut stream: &mut TcpStream) -> Result<(), String> {
+    pub fn frame_message(&mut self, stream: &mut TcpStream) -> Result<(), String> {
 
         let mut type_buf = vec![0; 1];
         let _length = stream.read(&mut type_buf).unwrap();
@@ -19,11 +20,8 @@ impl RespReader {
         self.message.push(type_buf[0]);
 
         match type_buf[0] {
-            b'+' | b'-' => self.get_simple_message(&mut stream)?,
-            b':' => {
-                self.get_simple_message(&mut stream)?
-                // TODO: return Err if value doesn't pass as i64
-            },
+            b'+' | b'-' => self.get_simple_message(stream)?,
+            b':' => self.get_integer(stream)?,
             // TODO: b'$' => ,
             // TODO: b'*' => ,
             _ => return Err("Invalid RESP type".to_string()),
@@ -61,6 +59,16 @@ impl RespReader {
                     }
                 }
             }
+        }
+    }
+
+    fn get_integer(&mut self, stream: &mut TcpStream) -> Result<(), String> {
+        self.get_simple_message(stream)?;
+
+        let s = str::from_utf8(&self.message[1..self.message.len()-2]).unwrap();
+        match s.parse::<i64>() {
+            Ok(_) => Ok(()),
+            Err(_) => Err("Not an integer".to_string()),
         }
     }
 
