@@ -1,4 +1,3 @@
-use std::net::TcpStream;
 use std::io::Read;
 use std::str;
 
@@ -12,7 +11,7 @@ impl RespReader {
         RespReader { message: vec![] }
     }
 
-    pub fn frame_message(&mut self, stream: &mut TcpStream) -> Result<(), String> {
+    pub fn frame_message<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
 
         let mut type_buf = vec![0; 1];
         let _length = stream.read(&mut type_buf).unwrap();
@@ -30,7 +29,7 @@ impl RespReader {
         Ok(())
     }
 
-    fn get_simple_message(&mut self, stream: &mut TcpStream) -> Result<(), String> {
+    fn get_simple_message<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
         let mut buf = vec![0; 20];
         let mut has_cr = false;
 
@@ -62,7 +61,7 @@ impl RespReader {
         }
     }
 
-    fn get_integer(&mut self, stream: &mut TcpStream) -> Result<(), String> {
+    fn get_integer<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
         self.get_simple_message(stream)?;
 
         let s = str::from_utf8(&self.message[1..self.message.len()-2]).unwrap();
@@ -72,7 +71,7 @@ impl RespReader {
         }
     }
 
-    fn get_bulk_string(&mut self, stream: &mut TcpStream) -> Result<(), String> {
+    fn get_bulk_string<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
         let mut buf = vec![0; 20];
         let mut state = BulkStringState::GetSize;
         let mut size = 0;
@@ -156,4 +155,108 @@ enum BulkStringState {
     GetSize,
     CheckEOL,
     BuildString,
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::RespReader;
+    use std::io;
+    use std::io::Read;
+
+    struct MockStream {
+        message: Vec<u8>,
+        pos: usize,
+    }
+
+    impl MockStream {
+        fn from(s: &str) -> Self {
+            MockStream {
+                message: s.as_bytes().to_vec(),
+                pos: 0,
+            }
+        }
+    }
+
+    impl Read for MockStream {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+
+            let len = self.message.len();
+            let end_pos = if self.pos + buf.len() > len {
+                len
+            } else {
+                buf.len()
+            };
+
+            for (i, j) in (self.pos..end_pos).enumerate() {
+                buf[i] = self.message[j];
+            }
+
+            for i in end_pos..buf.len() {
+                buf[i] = 0;
+            }
+
+            let size = end_pos - self.pos;
+            self.pos += size;
+            Ok(size)
+        }
+    }
+
+    #[test]
+    fn check_mock_stream() {
+        let mut stream = MockStream::from("$12\r\nHello World!\r\n");
+        let mut buf = vec![0; 10];
+        let len = stream.read(&mut buf).unwrap();
+        assert_eq!(10, len);
+        assert_eq!(&buf[..], b"$12\r\nHello");
+    }
+
+    #[test]
+    fn check_empty_string() {
+        let mut reader = RespReader::new();
+
+        let empty = "+\r\n".to_string();
+        let mut stream = MockStream::from(&empty);
+
+        reader.frame_message(&mut stream).unwrap();
+
+        assert_eq!(empty, String::from_utf8(reader.message).unwrap());
+    }
+
+    #[test]
+    fn check_simple_string() {
+        let mut reader = RespReader::new();
+
+        let simple = "+OK\r\n".to_string();
+        let mut stream = MockStream::from(&simple);
+
+        reader.frame_message(&mut stream).unwrap();
+
+        assert_eq!(simple, String::from_utf8(reader.message).unwrap());
+    }
+
+    #[test]
+    fn check_split_crlf() {
+        let mut reader = RespReader::new();
+
+        // with reader buf size of 20, \n is on the next read
+        let split_crlf = "+1234567890123456789\r\n".to_string();
+        let mut stream = MockStream::from(&split_crlf);
+
+        reader.frame_message(&mut stream).unwrap();
+
+        assert_eq!(split_crlf, String::from_utf8(reader.message).unwrap());
+    }
+
+    #[test]
+    fn check_nonconsecutive_crlf() {
+        let mut reader = RespReader::new();
+
+        let s = "+123\r4\n".to_string();
+        let mut stream = MockStream::from(&s);
+
+        let result = reader.frame_message(&mut stream);
+
+        assert_eq!(result, Err("CR not followed by LF".to_string()));
+    }
 }
