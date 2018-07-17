@@ -211,52 +211,60 @@ mod test {
         assert_eq!(&buf[..], b"$12\r\nHello");
     }
 
-    #[test]
-    fn check_empty_string() {
+    fn check_valid(s: &str) {
         let mut reader = RespReader::new();
-
-        let empty = "+\r\n".to_string();
-        let mut stream = MockStream::from(&empty);
+        let mut stream = MockStream::from(s);
 
         reader.frame_message(&mut stream).unwrap();
 
-        assert_eq!(empty, String::from_utf8(reader.message).unwrap());
+        assert_eq!(s.to_string(), String::from_utf8(reader.message).unwrap());
+    }
+
+    fn check_invalid(s: &str, e: &str) {
+        let mut reader = RespReader::new();
+        let mut stream = MockStream::from(s);
+
+        let result = reader.frame_message(&mut stream);
+
+        assert_eq!(result, Err(e.to_string()));
     }
 
     #[test]
     fn check_simple_string() {
-        let mut reader = RespReader::new();
+        let empty = "+\r\n";
+        check_valid(empty);
 
-        let simple = "+OK\r\n".to_string();
-        let mut stream = MockStream::from(&simple);
-
-        reader.frame_message(&mut stream).unwrap();
-
-        assert_eq!(simple, String::from_utf8(reader.message).unwrap());
-    }
-
-    #[test]
-    fn check_split_crlf() {
-        let mut reader = RespReader::new();
+        let simple = "+OK\r\n";
+        check_valid(simple);
 
         // with reader buf size of 20, \n is on the next read
-        let split_crlf = "+1234567890123456789\r\n".to_string();
-        let mut stream = MockStream::from(&split_crlf);
+        let split_crlf = "+1234567890123456789\r\n";
+        check_valid(split_crlf);
 
-        reader.frame_message(&mut stream).unwrap();
-
-        assert_eq!(split_crlf, String::from_utf8(reader.message).unwrap());
+        let broken_crlf = "+123\r4\n";
+        let err = "CR not followed by LF";
+        check_invalid(broken_crlf, err);
     }
 
     #[test]
-    fn check_nonconsecutive_crlf() {
-        let mut reader = RespReader::new();
+    fn check_error() {
+        let error_message = "-ERROR: Key not found\r\n";
+        check_valid(error_message);
+    }
 
-        let s = "+123\r4\n".to_string();
-        let mut stream = MockStream::from(&s);
+    #[test]
+    fn check_integer() {
+        let integer = ":100\r\n";
+        check_valid(integer);
+    }
 
-        let result = reader.frame_message(&mut stream);
+    #[test]
+    fn check_bulk_string() {
+        let simple = "$12\r\nHello World!\r\n";
+        check_valid(simple);
 
-        assert_eq!(result, Err("CR not followed by LF".to_string()));
+        let no_size = "$\r\nHi\r\n";
+        let err = "Not an integer";
+        check_invalid(no_size, err);
     }
 }
