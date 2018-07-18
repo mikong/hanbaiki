@@ -64,10 +64,9 @@ impl RespReader {
     fn get_integer<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
         self.get_simple_message(stream)?;
 
-        let s = str::from_utf8(&self.message[1..self.message.len()-2]).unwrap();
-        match s.parse::<i64>() {
-            Ok(_) => Ok(()),
-            Err(_) => Err("Not an integer".to_string()),
+        match self.parse_int(self.message.len() - 2) {
+            Some(_) => Ok(()),
+            None => Err("Not an integer".to_string()),
         }
     }
 
