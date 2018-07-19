@@ -4,11 +4,15 @@ use std::str;
 #[derive(Debug)]
 pub struct RespReader {
     pub message: Vec<u8>,
+    index: usize,
 }
 
 impl RespReader {
     pub fn new() -> Self {
-        RespReader { message: vec![] }
+        RespReader {
+            message: vec![],
+            index: 0,
+        }
     }
 
     pub fn frame_message<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
@@ -75,7 +79,7 @@ impl RespReader {
         let mut state = BulkStringState::GetSize;
         let mut size = 0;
 
-        let mut index = self.message.len();
+        self.index = self.message.len();
 
         loop {
             let length = stream.read(&mut buf).unwrap();
@@ -89,44 +93,71 @@ impl RespReader {
             }
 
             if state == BulkStringState::GetSize {
-                if let Some(i) = self.find_break(index) {
-                    match self.parse_int(i) {
-                        Some(n) => {
-                            size = n;
-                            state = BulkStringState::CheckEOL;
-                            index = i + 1;
-                        },
-                        None => return Err("Not an integer".to_string()),
-                    }
-                } else {
-                    index = self.message.len();
+                let start_index = self.index;
+                if let Some(n) = self.get_size(start_index)? {
+                    size = n;
+                    state = BulkStringState::CheckEOL;
                 }
             }
 
             if state == BulkStringState::CheckEOL {
-                if let Some(byte) = self.message.get(index) {
-                    if *byte == b'\n' {
-                        state = BulkStringState::BuildString;
-                        index += 1;
-                    } else {
-                        return Err("CR not followed by LF".to_string());
-                    }
+                if self.check_eol()?.is_some() {
+                    state = BulkStringState::BuildString;
                 }
             }
 
             if state == BulkStringState::BuildString {
-                if self.message.len() > index + size as usize {
-                    index += size as usize;
-                    if self.message[index] == b'\r' && self.message[index + 1] == b'\n' {
-                        return Ok(());
-                    } else {
-                        return Err("Does not end with CRLF".to_string());
-                    }
+                if self.build_string(size as usize)?.is_some() {
+                    return Ok(());
                 }
             }
 
         }
 
+    }
+
+    fn get_size(&mut self, start_index: usize) -> Result<Option<usize>, String> {
+        let mut size = None;
+
+        if let Some(i) = self.find_break(start_index) {
+            match self.parse_int(i) {
+                Some(n) => {
+                    size = Some(n as usize);
+                    self.index = i + 1;
+                },
+                None => return Err("Not an integer".to_string()),
+            }
+        } else {
+            self.index = self.message.len();
+        }
+
+        Ok(size)
+    }
+
+    fn check_eol(&mut self) -> Result<Option<()>, String> {
+        if let Some(&byte) = self.message.get(self.index) {
+            if byte == b'\n' {
+                self.index += 1;
+                return Ok(Some(()));
+            } else {
+                return Err("CR not followed by LF".to_string());
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn build_string(&mut self, size: usize) -> Result<Option<()>, String> {
+        if self.message.len() > self.index + size + 1 {
+            self.index += size;
+            if self.message[self.index] == b'\r' && self.message[self.index + 1] == b'\n' {
+                return Ok(Some(()));
+            } else {
+                return Err("Does not end with CRLF".to_string());
+            }
+        }
+
+        Ok(None)
     }
 
     fn find_break(&self, start_index: usize) -> Option<usize> {
@@ -265,5 +296,9 @@ mod test {
         let no_size = "$\r\nHi\r\n";
         let err = "Not an integer";
         check_invalid(no_size, err);
+
+        let s = "$12\r\nHello World!\r\r";
+        let err = "Does not end with CRLF";
+        check_invalid(s, err);
     }
 }
