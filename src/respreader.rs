@@ -5,6 +5,7 @@ use std::str;
 pub struct RespReader {
     pub message: Vec<u8>,
     index: usize,
+    stack: Vec<ReaderState>,
 }
 
 impl RespReader {
@@ -12,108 +13,166 @@ impl RespReader {
         RespReader {
             message: vec![],
             index: 0,
+            stack: vec![],
         }
     }
 
     pub fn frame_message<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
 
-        let mut type_buf = vec![0; 1];
-        let _length = stream.read(&mut type_buf).unwrap();
+        self.stack.push(ReaderState::GetType);
+        self.read(stream)?;
 
-        self.message.push(type_buf[0]);
+        loop {
+            let get_fn = match self.current_state() {
+                Some(&ReaderState::GetType) => Self::get_type,
+                Some(&ReaderState::GetSimpleMessage(_)) => Self::get_simple_message,
+                Some(&ReaderState::GetInteger(_)) => Self::get_integer,
+                Some(&ReaderState::GetBulkString(_)) => Self::get_bulk_string,
+                None => return Ok(()),
+            };
 
-        match type_buf[0] {
-            b'+' | b'-' => self.get_simple_message(stream)?,
-            b':' => self.get_integer(stream)?,
-            b'$' => self.get_bulk_string(stream)?,
-            // TODO: b'*' => ,
-            _ => return Err("Invalid RESP type".to_string()),
+            match get_fn(self)? {
+                Some(_) => {
+                    if self.stack.is_empty() {
+                        return Ok(());
+                    }
+                },
+                None => self.read(stream)?,
+            }
+        }
+    }
+
+    fn current_state(&self) -> Option<&ReaderState> {
+        self.stack.last()
+    }
+
+    fn substate(&self, ) -> Option<SubState> {
+        match self.current_state() {
+            Some(&ReaderState::GetSimpleMessage(s)) => Some(s),
+            Some(&ReaderState::GetInteger(s)) => Some(s),
+            Some(&ReaderState::GetBulkString(s)) => Some(s),
+            _ => None,
+        }
+    }
+
+    fn transition_to(&mut self, state: ReaderState) {
+        self.stack.pop();
+        self.stack.push(state);
+    }
+
+    fn read<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
+        let mut buf = vec![0; 20];
+        let length = stream.read(&mut buf).unwrap();
+
+        if length == 0 {
+            return Err("EOF before end of frame".to_string());
+        }
+
+        for byte in buf[0..length].iter() {
+            self.message.push(*byte)
         }
 
         Ok(())
     }
 
-    fn get_simple_message<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
-        let mut buf = vec![0; 20];
-        let mut has_cr = false;
-
-        loop {
-            let length = stream.read(&mut buf).unwrap();
-
-            if length == 0 {
-                return Err("EOF before end of frame".to_string());
-            }
-
-            for byte in buf[0..length].iter() {
-
-                if has_cr && *byte != b'\n' {
-                    return Err("CR not followed by LF".to_string());
-                }
-
-                self.message.push(*byte);
-
-                if *byte == b'\r' {
-                    has_cr = true;
-                } else if *byte == b'\n' {
-                    if has_cr {
-                        return Ok(());
-                    } else {
-                        return Err("LF before CR".to_string());
-                    }
-                }
-            }
+    fn get_type(&mut self) -> Result<Option<()>, String> {
+        match self.message.get(self.index) {
+            Some(&b'+') | Some(&b'-') =>
+                self.transition_to(ReaderState::GetSimpleMessage(SubState::CheckCR)),
+            Some(&b':') =>
+                self.transition_to(ReaderState::GetInteger(SubState::CheckCR)),
+            Some(&b'$') =>
+                self.transition_to(ReaderState::GetBulkString(SubState::GetSize)),
+            // TODO: Some(b'*') =>
+            _ => return Err("Invalid RESP type".to_string()),
         }
+
+        self.index += 1;
+        Ok(Some(()))
     }
 
-    fn get_integer<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
-        self.get_simple_message(stream)?;
+    fn get_simple_message(&mut self) -> Result<Option<()>, String> {
+        let mut state = self.substate().unwrap();
 
-        match self.parse_int(self.message.len() - 2) {
-            Some(_) => Ok(()),
-            None => Err("Not an integer".to_string()),
+        // TODO: return Err("LF before CR".to_string());
+        if state == SubState::CheckCR {
+            let start_index = self.index;
+            if let Some(i) = self.find_break(start_index) {
+                self.index = i + 1;
+                state = SubState::CheckLF;
+                self.transition_to(ReaderState::GetSimpleMessage(state));
+            } else {
+                self.index = self.message.len();
+            }
         }
+
+        if state == SubState::CheckLF {
+            if self.check_lf()?.is_some() {
+                self.stack.pop();
+                return Ok(Some(()));
+            }
+        }
+
+        Ok(None)
     }
 
-    fn get_bulk_string<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
-        let mut buf = vec![0; 20];
-        let mut state = BulkStringState::GetSize;
+    fn get_integer(&mut self) -> Result<Option<()>, String> {
+        let mut state = self.substate().unwrap();
+
+        if state == SubState::CheckCR {
+            let start_index = self.index;
+            if let Some(i) = self.find_break(start_index) {
+                self.index = i + 1;
+                state = SubState::CheckLF;
+                self.transition_to(ReaderState::GetInteger(state));
+            }
+        }
+
+        if state == SubState::CheckLF {
+            if self.check_lf()?.is_none() {
+                return Ok(None);
+            }
+
+            match self.parse_int(self.index - 2) {
+                Some(_) => {
+                    self.stack.pop();
+                    return Ok(Some(()));
+                },
+                None => return Err("Not an integer".to_string()),
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn get_bulk_string(&mut self) -> Result<Option<()>, String> {
         let mut size = 0;
+        let mut state = self.substate().unwrap();
 
-        self.index = self.message.len();
-
-        loop {
-            let length = stream.read(&mut buf).unwrap();
-
-            if length == 0 {
-                return Err("EOF before end of frame".to_string());
+        if state == SubState::GetSize {
+            let start_index = self.index;
+            if let Some(n) = self.get_size(start_index)? {
+                size = n;
+                state = SubState::CheckLF;
+                self.transition_to(ReaderState::GetBulkString(state));
             }
-
-            for byte in buf[0..length].iter() {
-                self.message.push(*byte)
-            }
-
-            if state == BulkStringState::GetSize {
-                let start_index = self.index;
-                if let Some(n) = self.get_size(start_index)? {
-                    size = n;
-                    state = BulkStringState::CheckEOL;
-                }
-            }
-
-            if state == BulkStringState::CheckEOL {
-                if self.check_eol()?.is_some() {
-                    state = BulkStringState::BuildString;
-                }
-            }
-
-            if state == BulkStringState::BuildString {
-                if self.build_string(size as usize)?.is_some() {
-                    return Ok(());
-                }
-            }
-
         }
 
+        if state == SubState::CheckLF {
+            if self.check_lf()?.is_some() {
+                state = SubState::BuildString;
+                self.transition_to(ReaderState::GetBulkString(state));
+            }
+        }
+
+        if state == SubState::BuildString {
+            if self.build_string(size as usize)?.is_some() {
+                self.stack.pop();
+                return Ok(Some(()));
+            }
+        }
+
+        Ok(None)
     }
 
     fn get_size(&mut self, start_index: usize) -> Result<Option<usize>, String> {
@@ -134,7 +193,7 @@ impl RespReader {
         Ok(size)
     }
 
-    fn check_eol(&mut self) -> Result<Option<()>, String> {
+    fn check_lf(&mut self) -> Result<Option<()>, String> {
         if let Some(&byte) = self.message.get(self.index) {
             if byte == b'\n' {
                 self.index += 1;
@@ -180,10 +239,20 @@ impl RespReader {
 
 }
 
-#[derive(Debug, PartialEq)]
-enum BulkStringState {
+#[derive(Debug)]
+enum ReaderState {
+    GetType,
+    GetSimpleMessage(SubState),
+    GetInteger(SubState),
+    GetBulkString(SubState),
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+enum SubState {
+    CheckCR,
+    CheckLF,
+    // bulk string:
     GetSize,
-    CheckEOL,
     BuildString,
 }
 
@@ -268,7 +337,7 @@ mod test {
         check_valid(simple);
 
         // with reader buf size of 20, \n is on the next read
-        let split_crlf = "+1234567890123456789\r\n";
+        let split_crlf = "+123456789012345678\r\n";
         check_valid(split_crlf);
 
         let broken_crlf = "+123\r4\n";
