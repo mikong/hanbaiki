@@ -27,7 +27,8 @@ impl RespReader {
                 Some(&ReaderState::GetType) => Self::get_type,
                 Some(&ReaderState::GetSimpleMessage(_)) => Self::get_simple_message,
                 Some(&ReaderState::GetInteger(_)) => Self::get_integer,
-                Some(&ReaderState::GetBulkString(_)) => Self::get_bulk_string,
+                Some(&ReaderState::GetBulkString(_, _)) => Self::get_bulk_string,
+                Some(&ReaderState::GetArray(_, _)) => Self::get_array,
                 None => return Ok(()),
             };
 
@@ -46,11 +47,10 @@ impl RespReader {
         self.stack.last()
     }
 
-    fn substate(&self, ) -> Option<SubState> {
+    fn substate(&self) -> Option<SubState> {
         match self.current_state() {
             Some(&ReaderState::GetSimpleMessage(s)) => Some(s),
             Some(&ReaderState::GetInteger(s)) => Some(s),
-            Some(&ReaderState::GetBulkString(s)) => Some(s),
             _ => None,
         }
     }
@@ -82,8 +82,9 @@ impl RespReader {
             Some(&b':') =>
                 self.transition_to(ReaderState::GetInteger(SubState::CheckCR)),
             Some(&b'$') =>
-                self.transition_to(ReaderState::GetBulkString(SubState::GetSize)),
-            // TODO: Some(b'*') =>
+                self.transition_to(ReaderState::GetBulkString(SubState::GetSize, 0)),
+            Some(&b'*') =>
+                self.transition_to(ReaderState::GetArray(SubState::GetSize, 0)),
             _ => return Err("Invalid RESP type".to_string()),
         }
 
@@ -122,23 +123,21 @@ impl RespReader {
         if state == SubState::CheckCR {
             let start_index = self.index;
             if let Some(i) = self.find_break(start_index) {
-                self.index = i + 1;
-                state = SubState::CheckLF;
-                self.transition_to(ReaderState::GetInteger(state));
+                match self.parse_int(start_index, i) {
+                    Some(_) => {
+                        self.index = i + 1;
+                        state = SubState::CheckLF;
+                        self.transition_to(ReaderState::GetInteger(state));
+                    },
+                    None => return Err("Not an integer".to_string()),
+                }
             }
         }
 
         if state == SubState::CheckLF {
-            if self.check_lf()?.is_none() {
-                return Ok(None);
-            }
-
-            match self.parse_int(self.index - 2) {
-                Some(_) => {
-                    self.stack.pop();
-                    return Ok(Some(()));
-                },
-                None => return Err("Not an integer".to_string()),
+            if self.check_lf()?.is_some() {
+                self.stack.pop();
+                return Ok(Some(()));
             }
         }
 
@@ -146,22 +145,24 @@ impl RespReader {
     }
 
     fn get_bulk_string(&mut self) -> Result<Option<()>, String> {
-        let mut size = 0;
-        let mut state = self.substate().unwrap();
+        let (mut state, mut size) = match self.current_state() {
+            Some(&ReaderState::GetBulkString(st, sz)) => (st, sz),
+            _ => panic!("Invalid state in get_bulk_string"),
+        };
 
         if state == SubState::GetSize {
             let start_index = self.index;
             if let Some(n) = self.get_size(start_index)? {
                 size = n;
                 state = SubState::CheckLF;
-                self.transition_to(ReaderState::GetBulkString(state));
+                self.transition_to(ReaderState::GetBulkString(state, size));
             }
         }
 
         if state == SubState::CheckLF {
             if self.check_lf()?.is_some() {
                 state = SubState::BuildString;
-                self.transition_to(ReaderState::GetBulkString(state));
+                self.transition_to(ReaderState::GetBulkString(state, size));
             }
         }
 
@@ -175,19 +176,54 @@ impl RespReader {
         Ok(None)
     }
 
+    fn get_array(&mut self) -> Result<Option<()>, String> {
+        let (mut state, mut size) = match self.current_state() {
+            Some(&ReaderState::GetArray(st, sz)) => (st, sz),
+            _ => panic!("Invalid state in get_array"),
+        };
+
+        if state == SubState::GetSize {
+            let start_index = self.index;
+            if let Some(n) = self.get_size(start_index)? {
+                size = n;
+                state = SubState::CheckLF;
+                self.transition_to(ReaderState::GetArray(state, size));
+            }
+        }
+
+        if state == SubState::CheckLF {
+            if self.check_lf()?.is_some() {
+                state = SubState::GetElements;
+                self.transition_to(ReaderState::GetArray(state, size));
+            }
+        }
+
+        if state == SubState::GetElements {
+            if size > 0 {
+                size -= 1;
+                state = SubState::GetElements;
+                self.transition_to(ReaderState::GetArray(state, size));
+                self.stack.push(ReaderState::GetType);
+            } else {
+                self.stack.pop();
+            }
+            return Ok(Some(()));
+        }
+
+        Ok(None)
+    }
+
     fn get_size(&mut self, start_index: usize) -> Result<Option<usize>, String> {
         let mut size = None;
 
         if let Some(i) = self.find_break(start_index) {
-            match self.parse_int(i) {
+            match self.parse_int(start_index, i) {
                 Some(n) => {
                     size = Some(n as usize);
                     self.index = i + 1;
                 },
                 None => return Err("Not an integer".to_string()),
             }
-        } else {
-            self.index = self.message.len();
         }
 
         Ok(size)
@@ -210,6 +246,7 @@ impl RespReader {
         if self.message.len() > self.index + size + 1 {
             self.index += size;
             if self.message[self.index] == b'\r' && self.message[self.index + 1] == b'\n' {
+                self.index += 2;
                 return Ok(Some(()));
             } else {
                 return Err("Does not end with CRLF".to_string());
@@ -230,8 +267,8 @@ impl RespReader {
         None
     }
 
-    fn parse_int(&self, end_index: usize) -> Option<i64> {
-        match str::from_utf8(&self.message[1..end_index]) {
+    fn parse_int(&self, start_index: usize, end_index: usize) -> Option<i64> {
+        match str::from_utf8(&self.message[start_index..end_index]) {
             Ok(s) => s.parse::<i64>().ok(),
             Err(_) => None,
         }
@@ -244,7 +281,8 @@ enum ReaderState {
     GetType,
     GetSimpleMessage(SubState),
     GetInteger(SubState),
-    GetBulkString(SubState),
+    GetBulkString(SubState, usize),
+    GetArray(SubState, usize),
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -254,6 +292,8 @@ enum SubState {
     // bulk string:
     GetSize,
     BuildString,
+    // array:
+    GetElements,
 }
 
 #[cfg(test)]
@@ -369,5 +409,17 @@ mod test {
         let s = "$12\r\nHello World!\r\r";
         let err = "Does not end with CRLF";
         check_invalid(s, err);
+    }
+
+    #[test]
+    fn check_array() {
+        let empty = "*0\r\n";
+        check_valid(empty);
+
+        let simple = "*1\r\n$12\r\nHello World!\r\n";
+        check_valid(simple);
+
+        let mixed = "*3\r\n$12\r\nHello World!\r\n+OK\r\n:25\r\n";
+        check_valid(mixed);
     }
 }
