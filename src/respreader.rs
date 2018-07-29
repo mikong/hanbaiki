@@ -5,7 +5,7 @@ use std::str;
 pub struct RespReader {
     pub message: Vec<u8>,
     index: usize,
-    stack: Vec<ReaderState>,
+    stack: Vec<State>,
 }
 
 impl RespReader {
@@ -19,16 +19,16 @@ impl RespReader {
 
     pub fn frame_message<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
 
-        self.stack.push(ReaderState::GetType);
+        self.stack.push(State::GetType);
         self.read(stream)?;
 
         loop {
             let get_fn = match self.current_state() {
-                Some(&ReaderState::GetType) => Self::get_type,
-                Some(&ReaderState::GetSimpleMessage(_)) => Self::get_simple_message,
-                Some(&ReaderState::GetInteger(_)) => Self::get_integer,
-                Some(&ReaderState::GetBulkString(_, _)) => Self::get_bulk_string,
-                Some(&ReaderState::GetArray(_, _)) => Self::get_array,
+                Some(&State::GetType) => Self::get_type,
+                Some(&State::GetSimpleMessage(_)) => Self::get_simple_message,
+                Some(&State::GetInteger(_)) => Self::get_integer,
+                Some(&State::GetBulkString(_, _)) => Self::get_bulk_string,
+                Some(&State::GetArray(_, _)) => Self::get_array,
                 None => return Ok(()),
             };
 
@@ -43,19 +43,19 @@ impl RespReader {
         }
     }
 
-    fn current_state(&self) -> Option<&ReaderState> {
+    fn current_state(&self) -> Option<&State> {
         self.stack.last()
     }
 
     fn substate(&self) -> Option<SubState> {
         match self.current_state() {
-            Some(&ReaderState::GetSimpleMessage(s)) => Some(s),
-            Some(&ReaderState::GetInteger(s)) => Some(s),
+            Some(&State::GetSimpleMessage(s)) => Some(s),
+            Some(&State::GetInteger(s)) => Some(s),
             _ => None,
         }
     }
 
-    fn transition_to(&mut self, state: ReaderState) {
+    fn transition_to(&mut self, state: State) {
         self.stack.pop();
         self.stack.push(state);
     }
@@ -78,13 +78,13 @@ impl RespReader {
     fn get_type(&mut self) -> Result<Option<()>, String> {
         match self.message.get(self.index) {
             Some(&b'+') | Some(&b'-') =>
-                self.transition_to(ReaderState::GetSimpleMessage(SubState::CheckCR)),
+                self.transition_to(State::GetSimpleMessage(SubState::CheckCR)),
             Some(&b':') =>
-                self.transition_to(ReaderState::GetInteger(SubState::CheckCR)),
+                self.transition_to(State::GetInteger(SubState::CheckCR)),
             Some(&b'$') =>
-                self.transition_to(ReaderState::GetBulkString(SubState::GetSize, 0)),
+                self.transition_to(State::GetBulkString(SubState::GetSize, 0)),
             Some(&b'*') =>
-                self.transition_to(ReaderState::GetArray(SubState::GetSize, 0)),
+                self.transition_to(State::GetArray(SubState::GetSize, 0)),
             _ => return Err("Invalid RESP type".to_string()),
         }
 
@@ -101,7 +101,7 @@ impl RespReader {
             if let Some(i) = self.find_break(start_index) {
                 self.index = i + 1;
                 state = SubState::CheckLF;
-                self.transition_to(ReaderState::GetSimpleMessage(state));
+                self.transition_to(State::GetSimpleMessage(state));
             } else {
                 self.index = self.message.len();
             }
@@ -127,7 +127,7 @@ impl RespReader {
                     Some(_) => {
                         self.index = i + 1;
                         state = SubState::CheckLF;
-                        self.transition_to(ReaderState::GetInteger(state));
+                        self.transition_to(State::GetInteger(state));
                     },
                     None => return Err("Not an integer".to_string()),
                 }
@@ -146,7 +146,7 @@ impl RespReader {
 
     fn get_bulk_string(&mut self) -> Result<Option<()>, String> {
         let (mut state, mut size) = match self.current_state() {
-            Some(&ReaderState::GetBulkString(st, sz)) => (st, sz),
+            Some(&State::GetBulkString(st, sz)) => (st, sz),
             _ => panic!("Invalid state in get_bulk_string"),
         };
 
@@ -155,14 +155,14 @@ impl RespReader {
             if let Some(n) = self.get_size(start_index)? {
                 size = n;
                 state = SubState::CheckLF;
-                self.transition_to(ReaderState::GetBulkString(state, size));
+                self.transition_to(State::GetBulkString(state, size));
             }
         }
 
         if state == SubState::CheckLF {
             if self.check_lf()?.is_some() {
                 state = SubState::BuildString;
-                self.transition_to(ReaderState::GetBulkString(state, size));
+                self.transition_to(State::GetBulkString(state, size));
             }
         }
 
@@ -178,7 +178,7 @@ impl RespReader {
 
     fn get_array(&mut self) -> Result<Option<()>, String> {
         let (mut state, mut size) = match self.current_state() {
-            Some(&ReaderState::GetArray(st, sz)) => (st, sz),
+            Some(&State::GetArray(st, sz)) => (st, sz),
             _ => panic!("Invalid state in get_array"),
         };
 
@@ -187,14 +187,14 @@ impl RespReader {
             if let Some(n) = self.get_size(start_index)? {
                 size = n;
                 state = SubState::CheckLF;
-                self.transition_to(ReaderState::GetArray(state, size));
+                self.transition_to(State::GetArray(state, size));
             }
         }
 
         if state == SubState::CheckLF {
             if self.check_lf()?.is_some() {
                 state = SubState::GetElements;
-                self.transition_to(ReaderState::GetArray(state, size));
+                self.transition_to(State::GetArray(state, size));
             }
         }
 
@@ -202,8 +202,8 @@ impl RespReader {
             if size > 0 {
                 size -= 1;
                 state = SubState::GetElements;
-                self.transition_to(ReaderState::GetArray(state, size));
-                self.stack.push(ReaderState::GetType);
+                self.transition_to(State::GetArray(state, size));
+                self.stack.push(State::GetType);
             } else {
                 self.stack.pop();
             }
@@ -277,7 +277,7 @@ impl RespReader {
 }
 
 #[derive(Debug)]
-enum ReaderState {
+enum State {
     GetType,
     GetSimpleMessage(SubState),
     GetInteger(SubState),
