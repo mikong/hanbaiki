@@ -1,11 +1,13 @@
 use std::io::Read;
 use std::str;
+use value::Value;
 
 #[derive(Debug)]
 pub struct RespReader {
     pub message: Vec<u8>,
     index: usize,
     stack: Vec<State>,
+    value: Value,
 }
 
 impl RespReader {
@@ -14,6 +16,7 @@ impl RespReader {
             message: vec![],
             index: 0,
             stack: vec![],
+            value: Value::Null,
         }
     }
 
@@ -25,8 +28,8 @@ impl RespReader {
         loop {
             let get_fn = match self.current_state() {
                 Some(&State::GetType) => Self::get_type,
-                Some(&State::GetSimpleString(_)) | Some(&State::GetError(_)) =>
-                    Self::get_simple_message,
+                Some(&State::GetSimpleString(_, _)) => Self::get_simple_string,
+                Some(&State::GetError(_, _)) => Self::get_error,
                 Some(&State::GetInteger(_)) => Self::get_integer,
                 Some(&State::GetBulkString(_, _)) => Self::get_bulk_string,
                 Some(&State::GetArray(_, _)) => Self::get_array,
@@ -53,6 +56,13 @@ impl RespReader {
         self.stack.push(state);
     }
 
+    fn set_value(&mut self, value: Value) {
+        if self.value == Value::Null {
+            self.value = value;
+        }
+        // TODO: handle arrays and nested arrays
+    }
+
     fn read<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
         let mut buf = vec![0; 20];
         let length = stream.read(&mut buf).unwrap();
@@ -69,11 +79,12 @@ impl RespReader {
     }
 
     fn get_type(&mut self) -> Result<Option<()>, String> {
+        let i = self.index + 1;
         match self.message.get(self.index) {
             Some(&b'+') =>
-                self.transition_to(State::GetSimpleString(SubState::CheckCR)),
+                self.transition_to(State::GetSimpleString(SubState::CheckCR, i)),
             Some(&b'-') =>
-                self.transition_to(State::GetError(SubState::CheckCR)),
+                self.transition_to(State::GetError(SubState::CheckCR, i)),
             Some(&b':') =>
                 self.transition_to(State::GetInteger(SubState::CheckCR)),
             Some(&b'$') =>
@@ -87,27 +98,51 @@ impl RespReader {
         Ok(Some(()))
     }
 
-    fn get_simple_message(&mut self) -> Result<Option<()>, String> {
-        let mut substate;
-        let state = match self.current_state() {
-            Some(&State::GetSimpleString(s)) => {
-                substate = s;
-                State::GetSimpleString
-            },
-            Some(&State::GetError(s)) => {
-                substate = s;
-                State::GetError
-            },
-            _ => panic!("Invalid state in get_simple_message"),
+    fn get_simple_string(&mut self) -> Result<Option<()>, String> {
+        let (mut substate, i0) = match self.current_state() {
+            Some(&State::GetSimpleString(ss, i)) => (ss, i),
+            _ => panic!("Invalid state in get_simple_string"),
         };
 
         // TODO: return Err("LF before CR".to_string());
         if substate == SubState::CheckCR {
             let start_index = self.index;
             if let Some(i) = self.find_break(start_index) {
+                let v = String::from_utf8(self.message[i0..i].to_vec()).unwrap();
+                self.set_value(Value::SimpleString(v));
                 self.index = i + 1;
                 substate = SubState::CheckLF;
-                self.transition_to(state(substate));
+                self.transition_to(State::GetSimpleString(substate, i0));
+            } else {
+                self.index = self.message.len();
+            }
+        }
+
+        if substate == SubState::CheckLF {
+            if self.check_lf()?.is_some() {
+                self.stack.pop();
+                return Ok(Some(()));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn get_error(&mut self) -> Result<Option<()>, String> {
+        let (mut substate, i0) = match self.current_state() {
+            Some(&State::GetError(ss, i)) => (ss, i),
+            _ => panic!("Invalid state in get_error"),
+        };
+
+        // TODO: return Err("LF before CR".to_string());
+        if substate == SubState::CheckCR {
+            let start_index = self.index;
+            if let Some(i) = self.find_break(start_index) {
+                let v = String::from_utf8(self.message[i0..i].to_vec()).unwrap();
+                self.set_value(Value::Error(v));
+                self.index = i + 1;
+                substate = SubState::CheckLF;
+                self.transition_to(State::GetError(substate, i0));
             } else {
                 self.index = self.message.len();
             }
@@ -133,7 +168,8 @@ impl RespReader {
             let start_index = self.index;
             if let Some(i) = self.find_break(start_index) {
                 match self.parse_int(start_index, i) {
-                    Some(_) => {
+                    Some(v) => {
+                        self.set_value(Value::Integer(v));
                         self.index = i + 1;
                         substate = SubState::CheckLF;
                         self.transition_to(State::GetInteger(substate));
@@ -204,6 +240,7 @@ impl RespReader {
             if self.check_lf()?.is_some() {
                 substate = SubState::GetElements;
                 self.transition_to(State::GetArray(substate, size));
+                self.set_value(Value::Array(vec![]));
             }
         }
 
@@ -253,8 +290,12 @@ impl RespReader {
 
     fn build_string(&mut self, size: usize) -> Result<Option<()>, String> {
         if self.message.len() > self.index + size + 1 {
+            let start = self.index;
             self.index += size;
             if self.message[self.index] == b'\r' && self.message[self.index + 1] == b'\n' {
+                let end = self.index;
+                let v = String::from_utf8(self.message[start..end].to_vec()).unwrap();
+                self.set_value(Value::BulkString(v));
                 self.index += 2;
                 return Ok(Some(()));
             } else {
@@ -288,8 +329,8 @@ impl RespReader {
 #[derive(Debug)]
 enum State {
     GetType,
-    GetSimpleString(SubState),
-    GetError(SubState),
+    GetSimpleString(SubState, usize),
+    GetError(SubState, usize),
     GetInteger(SubState),
     GetBulkString(SubState, usize),
     GetArray(SubState, usize),
@@ -310,6 +351,7 @@ enum SubState {
 mod test {
 
     use super::RespReader;
+    use super::Value;
     use std::io;
     use std::io::Read;
 
@@ -431,5 +473,52 @@ mod test {
 
         let mixed = "*3\r\n$12\r\nHello World!\r\n+OK\r\n:25\r\n";
         check_valid(mixed);
+    }
+
+    fn get_value(s: &str) -> Value {
+        let mut reader = RespReader::new();
+        let mut stream = MockStream::from(s);
+
+        reader.frame_message(&mut stream).unwrap();
+        reader.value
+    }
+
+    #[test]
+    fn check_simple_string_val() {
+        let empty = "+\r\n";
+        let mut v = get_value(empty);
+        assert_eq!(v, Value::SimpleString("".to_string()));
+
+        let simple = "+OK\r\n";
+        v = get_value(simple);
+        assert_eq!(v, Value::SimpleString("OK".to_string()));
+    }
+
+    #[test]
+    fn check_error_val() {
+        let error_message = "-ERROR: Key not found\r\n";
+        let v = get_value(error_message);
+        assert_eq!(v, Value::Error("ERROR: Key not found".to_string()));
+    }
+
+    #[test]
+    fn check_integer_val() {
+        let integer = ":100\r\n";
+        let v = get_value(integer);
+        assert_eq!(v, Value::Integer(100));
+    }
+
+    #[test]
+    fn check_bulk_string_val() {
+        let simple = "$12\r\nHello World!\r\n";
+        let v = get_value(simple);
+        assert_eq!(v, Value::BulkString("Hello World!".to_string()));
+    }
+
+    #[test]
+    fn check_array_val() {
+        let empty = "*0\r\n";
+        let v = get_value(empty);
+        assert_eq!(v, Value::Array(vec![]));
     }
 }

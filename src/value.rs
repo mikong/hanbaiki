@@ -1,5 +1,5 @@
 /// Represents a deserialized value of the RESP data.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Value {
     /// Not a valid RESP data.
     /// This is only used internally to
