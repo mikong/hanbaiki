@@ -32,7 +32,7 @@ impl RespReader {
                 Some(&State::GetError(_, _)) => Self::get_error,
                 Some(&State::GetInteger(_)) => Self::get_integer,
                 Some(&State::GetBulkString(_, _)) => Self::get_bulk_string,
-                Some(&State::GetArray(_, _)) => Self::get_array,
+                Some(&State::GetArray(_)) => Self::get_array,
                 None => return Ok(()),
             };
 
@@ -90,7 +90,7 @@ impl RespReader {
             Some(&b'$') =>
                 self.transition_to(State::GetBulkString(SubState::GetSize, 0)),
             Some(&b'*') =>
-                self.transition_to(State::GetArray(SubState::GetSize, 0)),
+                self.transition_to(State::GetArray(GetArray::new())),
             _ => return Err("Invalid RESP type".to_string()),
         }
 
@@ -223,7 +223,7 @@ impl RespReader {
 
     fn get_array(&mut self) -> Result<Option<()>, String> {
         let (mut substate, mut size) = match self.current_state() {
-            Some(&State::GetArray(ss, sz)) => (ss, sz),
+            Some(&State::GetArray(ref ga)) => (ga.substate, ga.size),
             _ => panic!("Invalid state in get_array"),
         };
 
@@ -232,31 +232,46 @@ impl RespReader {
             if let Some(n) = self.get_size(start_index)? {
                 size = n;
                 substate = SubState::CheckLF;
-                self.transition_to(State::GetArray(substate, size));
+                self.get_array_change(|sm| {
+                    sm.size = size;
+                    sm.substate = substate;
+                });
             }
         }
 
         if substate == SubState::CheckLF {
             if self.check_lf()?.is_some() {
                 substate = SubState::GetElements;
-                self.transition_to(State::GetArray(substate, size));
-                self.set_value(Value::Array(vec![]));
+                self.get_array_change(|sm| {
+                    sm.substate = substate;
+                });
             }
         }
 
         if substate == SubState::GetElements {
             if size > 0 {
-                size -= 1;
-                substate = SubState::GetElements;
-                self.transition_to(State::GetArray(substate, size));
+                self.get_array_change(|sm| {
+                    sm.size -= 1;
+                });
                 self.stack.push(State::GetType);
             } else {
-                self.stack.pop();
+                match self.stack.pop() {
+                    Some(State::GetArray(ga)) => self.set_value(ga.value),
+                    _ => panic!("Invalid state in get_array"),
+                };
             }
             return Ok(Some(()));
         }
 
         Ok(None)
+    }
+
+    fn get_array_change<T: FnMut(&mut GetArray)>(&mut self, mut change: T) {
+        let state_machine = match self.stack.last_mut() {
+            Some(&mut State::GetArray(ref mut ga)) => ga,
+            _ => panic!("Invalid state in get_array"),
+        };
+        change(state_machine);
     }
 
     fn get_size(&mut self, start_index: usize) -> Result<Option<usize>, String> {
@@ -333,7 +348,24 @@ enum State {
     GetError(SubState, usize),
     GetInteger(SubState),
     GetBulkString(SubState, usize),
-    GetArray(SubState, usize),
+    GetArray(GetArray),
+}
+
+#[derive(Debug)]
+struct GetArray {
+    substate: SubState,
+    size: usize,
+    value: Value,
+}
+
+impl GetArray {
+    fn new() -> Self {
+        GetArray {
+            substate: SubState::GetSize,
+            size: 0,
+            value: Value::Array(vec![]),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
