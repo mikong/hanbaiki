@@ -1,5 +1,6 @@
 use std::io::Read;
 use std::str;
+use std::mem;
 use value::Value;
 
 #[derive(Debug)]
@@ -57,10 +58,16 @@ impl RespReader {
     }
 
     fn set_value(&mut self, value: Value) {
-        if self.value == Value::Null {
+        let len = self.stack.len();
+
+        if len > 1 {
+            match self.stack.get_mut(len - 2) {
+                Some(&mut State::GetArray(ref mut ga)) => ga.elements.push(value),
+                _ => panic!("Invalid state in stack"),
+            }
+        } else {
             self.value = value;
         }
-        // TODO: handle arrays and nested arrays
     }
 
     fn read<T: Read>(&mut self, stream: &mut T) -> Result<(), String> {
@@ -255,10 +262,12 @@ impl RespReader {
                 });
                 self.stack.push(State::GetType);
             } else {
-                match self.stack.pop() {
-                    Some(State::GetArray(ga)) => self.set_value(ga.value),
+                let v = match self.stack.last_mut() {
+                    Some(&mut State::GetArray(ref mut ga)) => ga.pop_value(),
                     _ => panic!("Invalid state in get_array"),
                 };
+                self.set_value(v);
+                self.stack.pop();
             }
             return Ok(Some(()));
         }
@@ -355,7 +364,7 @@ enum State {
 struct GetArray {
     substate: SubState,
     size: usize,
-    value: Value,
+    elements: Vec<Value>,
 }
 
 impl GetArray {
@@ -363,8 +372,15 @@ impl GetArray {
         GetArray {
             substate: SubState::GetSize,
             size: 0,
-            value: Value::Array(vec![]),
+            elements: vec![],
         }
+    }
+
+    fn pop_value(&mut self) -> Value {
+        let v = &mut self.elements;
+        let mut c = vec![];
+        mem::swap(v, &mut c);
+        Value::Array(c)
     }
 }
 
@@ -552,5 +568,22 @@ mod test {
         let empty = "*0\r\n";
         let v = get_value(empty);
         assert_eq!(v, Value::Array(vec![]));
+
+        let simple = "*1\r\n$12\r\nHello World!\r\n";
+        let v = get_value(simple);
+        assert_eq!(v, Value::Array(vec![Value::BulkString("Hello World!".to_string())]));
+
+        // [[$"A", [-ERR]], +OK, :25]
+        let nested_array = "*3\r\n*2\r\n$1\r\nA\r\n*1\r\n-ERR\r\n+OK\r\n:25\r\n";
+        let expected = Value::Array(vec![
+            Value::Array(vec![
+                Value::BulkString("A".to_string()),
+                Value::Array(vec![Value::Error("ERR".to_string())]),
+            ]),
+            Value::SimpleString("OK".to_string()),
+            Value::Integer(25),
+        ]);
+        let v = get_value(nested_array);
+        assert_eq!(v, expected);
     }
 }
