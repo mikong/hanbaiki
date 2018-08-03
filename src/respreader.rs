@@ -8,7 +8,7 @@ pub struct RespReader {
     pub message: Vec<u8>,
     index: usize,
     stack: Vec<State>,
-    value: Value,
+    pub value: Value,
 }
 
 impl RespReader {

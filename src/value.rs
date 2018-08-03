@@ -21,3 +21,23 @@ pub enum Value {
     /// Represents a RESP Array.
     Array(Vec<Value>),
 }
+
+use std::mem;
+
+impl Value {
+    pub fn to_string(self) -> String {
+        match self {
+            Value::SimpleString(s) => s,
+            Value::Error(s) => s,
+            Value::Integer(i) => i.to_string(),
+            Value::BulkString(s) => s,
+            _ => panic!("Unexpected Value type"),
+        }
+    }
+
+    pub fn take(&mut self) -> Value {
+        let mut v = Value::Null;
+        mem::swap(self, &mut v);
+        v
+    }
+}
