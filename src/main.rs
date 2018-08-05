@@ -19,14 +19,14 @@ fn data_server(addr: &str, data: &mut HashMap<String, Vec<u8>>) -> io::Result<()
     let listener = TcpListener::bind(addr)?;
     println!("listening on {}", addr);
 
+    // Wait for a client to connect.
+    let (mut stream, addr) = listener.accept()?;
+    println!("connection received from {}", addr);
+
+    let mut write_stream = stream.try_clone()?;
+    write_stream.set_nodelay(true)?;
+
     loop {
-        // Wait for a client to connect.
-        let (mut stream, addr) = listener.accept()?;
-        println!("connection received from {}", addr);
-
-        let mut write_stream = stream.try_clone()?;
-        write_stream.set_nodelay(true)?;
-
         // Read command.
         let mut reader = RespReader::new();
         reader.frame_message(&mut stream).unwrap();
@@ -36,7 +36,6 @@ fn data_server(addr: &str, data: &mut HashMap<String, Vec<u8>>) -> io::Result<()
 
         // Return response.
         write_stream.write(response.as_bytes())?;
-        println!("connection closed");
     }
 }
 
