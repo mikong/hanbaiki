@@ -43,14 +43,20 @@ fn handle_client(mut stream: TcpStream, data: KvStore) -> io::Result<()> {
     loop {
         // Read command.
         let mut reader = RespReader::new();
-        reader.frame_message(&mut stream).unwrap();
-        let command = reader.value;
+        match reader.frame_message(&mut stream) {
+            Ok(_) => {
+                let command = reader.value;
 
-        let data = Arc::clone(&data);
-        let response = process_command(data, command);
+                let data = Arc::clone(&data);
+                let response = process_command(data, command);
 
-        // Return response.
-        write_stream.write(response.as_bytes())?;
+                write_stream.write(response.as_bytes())?;
+            },
+            Err(e) => {
+                println!("{:?}", e);
+                return Ok(())
+            },
+        }
     }
 }
 

@@ -75,7 +75,7 @@ impl RespReader {
         let length = stream.read(&mut buf).unwrap();
 
         if length == 0 {
-            return Err("EOF before end of frame".to_string());
+            return Err("Reader could no longer read from stream".to_string());
         }
 
         for byte in buf[0..length].iter() {
