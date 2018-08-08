@@ -1,4 +1,5 @@
 extern crate hanbaiki;
+extern crate clap;
 
 use std::net::TcpStream;
 use std::io;
@@ -7,7 +8,12 @@ use std::io::{Write};
 use hanbaiki::{RespWriter, RespReader};
 use hanbaiki::Value;
 
+use clap::{App};
+
 fn main() {
+    let _matches = App::new("Hanbaiki CLI")
+        .get_matches();
+
     let mut stream = TcpStream::connect("127.0.0.1:6363")
         .expect("Couldn't connect to the server...");
 

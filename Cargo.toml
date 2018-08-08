@@ -5,3 +5,4 @@ authors = ["mikong <michaelgalero@gmail.com>", "Mithi Sevilla <mithi.sevilla@gma
 publish = false
 
 [dependencies]
+clap = "2.32.0"
