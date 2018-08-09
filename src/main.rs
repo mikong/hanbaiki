@@ -1,5 +1,8 @@
 extern crate hanbaiki;
 
+#[macro_use]
+extern crate clap;
+
 use std::io;
 use std::io::Write;
 use std::collections::HashMap;
@@ -11,12 +14,30 @@ use std::sync::{RwLock, Arc};
 use hanbaiki::{RespWriter, RespReader};
 use hanbaiki::Value;
 
+use clap::{App, Arg};
+
 type KvStore = Arc<RwLock<HashMap<String, Vec<u8>>>>;
 
 fn main() {
+    let matches = App::new("Hanbaiki")
+        .version(crate_version!())
+        .about("A simple key-value store.")
+        .arg(Arg::with_name("PORT")
+            .help("Specify a custom port. Default: 6363")
+            .takes_value(true)
+            .long("port")
+            .short("p"))
+        .get_matches();
+
+    let port = value_t!(matches, "PORT", u16).unwrap_or_else(|_| {
+        println!("Specified port value is invalid, using default 6363.");
+        6363
+    });
+
+    let address = format!("127.0.0.1:{}", port);
     let data = Arc::new(RwLock::new(HashMap::new()));
 
-    data_server("127.0.0.1:6363", data);
+    data_server(&address, data);
 }
 
 fn data_server(addr: &str, data: KvStore) {

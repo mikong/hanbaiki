@@ -1,4 +1,6 @@
 extern crate hanbaiki;
+
+#[macro_use]
 extern crate clap;
 
 use std::net::TcpStream;
@@ -8,17 +10,34 @@ use std::io::{Write};
 use hanbaiki::{RespWriter, RespReader};
 use hanbaiki::Value;
 
-use clap::{App};
+use clap::{App, Arg};
 
 fn main() {
-    let _matches = App::new("Hanbaiki CLI")
+    let matches = App::new("Hanbaiki CLI")
+        .version(crate_version!())
+        .about("This is a CLI for the simple key-value store Hanbaiki.")
+        .arg(Arg::with_name("PORT")
+            .help("Specify a custom port. Default: 6363")
+            .takes_value(true)
+            .long("port")
+            .short("p"))
         .get_matches();
 
-    let mut stream = TcpStream::connect("127.0.0.1:6363")
+    let port = value_t!(matches, "PORT", u16).unwrap_or_else(|_| {
+        println!("Specified port value is invalid, using default 6363.");
+        6363
+    });
+
+    let address = format!("127.0.0.1:{}", port);
+    let mut stream = TcpStream::connect(address)
         .expect("Couldn't connect to the server...");
 
     stream.set_nodelay(true).expect("set_nodelay failed");
 
+    start_repl(&mut stream);
+}
+
+fn start_repl(stream: &mut TcpStream) {
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
@@ -29,7 +48,7 @@ fn main() {
             .read_line(&mut command)
             .expect("Failed to read line");
 
-        process_command(&command, &mut stream);
+        process_command(&command, stream);
     }
 }
 
