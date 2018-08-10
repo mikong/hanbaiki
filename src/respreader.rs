@@ -28,12 +28,12 @@ impl RespReader {
 
         loop {
             let get_fn = match self.current_state() {
-                Some(&State::GetType) => Self::get_type,
-                Some(&State::GetSimpleString(_, _)) => Self::get_simple_string,
-                Some(&State::GetError(_, _)) => Self::get_error,
-                Some(&State::GetInteger(_)) => Self::get_integer,
-                Some(&State::GetBulkString(_, _)) => Self::get_bulk_string,
-                Some(&State::GetArray(_)) => Self::get_array,
+                Some(State::GetType) => Self::get_type,
+                Some(State::GetSimpleString(_, _)) => Self::get_simple_string,
+                Some(State::GetError(_, _)) => Self::get_error,
+                Some(State::GetInteger(_)) => Self::get_integer,
+                Some(State::GetBulkString(_, _)) => Self::get_bulk_string,
+                Some(State::GetArray(_)) => Self::get_array,
                 None => return Ok(()),
             };
 
@@ -62,7 +62,7 @@ impl RespReader {
 
         if len > 1 {
             match self.stack.get_mut(len - 2) {
-                Some(&mut State::GetArray(ref mut ga)) => ga.elements.push(value),
+                Some(State::GetArray(ga)) => ga.elements.push(value),
                 _ => panic!("Invalid state in stack"),
             }
         } else {
@@ -88,15 +88,15 @@ impl RespReader {
     fn get_type(&mut self) -> Result<Option<()>, String> {
         let i = self.index + 1;
         match self.message.get(self.index) {
-            Some(&b'+') =>
+            Some(b'+') =>
                 self.transition_to(State::GetSimpleString(SubState::CheckCR, i)),
-            Some(&b'-') =>
+            Some(b'-') =>
                 self.transition_to(State::GetError(SubState::CheckCR, i)),
-            Some(&b':') =>
+            Some(b':') =>
                 self.transition_to(State::GetInteger(SubState::CheckCR)),
-            Some(&b'$') =>
+            Some(b'$') =>
                 self.transition_to(State::GetBulkString(SubState::GetSize, 0)),
-            Some(&b'*') =>
+            Some(b'*') =>
                 self.transition_to(State::GetArray(GetArray::new())),
             _ => return Err("Invalid RESP type".to_string()),
         }
@@ -230,7 +230,7 @@ impl RespReader {
 
     fn get_array(&mut self) -> Result<Option<()>, String> {
         let (mut substate, mut size) = match self.current_state() {
-            Some(&State::GetArray(ref ga)) => (ga.substate, ga.size),
+            Some(State::GetArray(ga)) => (ga.substate, ga.size),
             _ => panic!("Invalid state in get_array"),
         };
 
@@ -263,7 +263,7 @@ impl RespReader {
                 self.stack.push(State::GetType);
             } else {
                 let v = match self.stack.last_mut() {
-                    Some(&mut State::GetArray(ref mut ga)) => ga.pop_value(),
+                    Some(State::GetArray(ga)) => ga.pop_value(),
                     _ => panic!("Invalid state in get_array"),
                 };
                 self.set_value(v);
@@ -277,7 +277,7 @@ impl RespReader {
 
     fn get_array_change<T: FnMut(&mut GetArray)>(&mut self, mut change: T) {
         let state_machine = match self.stack.last_mut() {
-            Some(&mut State::GetArray(ref mut ga)) => ga,
+            Some(State::GetArray(ga)) => ga,
             _ => panic!("Invalid state in get_array"),
         };
         change(state_machine);
