@@ -108,7 +108,7 @@ impl RespReader {
     fn get_simple_string(&mut self) -> Result<Option<()>, String> {
         let (mut substate, i0) = match self.current_state() {
             Some(&State::GetSimpleString(ss, i)) => (ss, i),
-            _ => panic!("Invalid state in get_simple_string"),
+            _ => unreachable!(),
         };
 
         // TODO: return Err("LF before CR".to_string());
@@ -138,7 +138,7 @@ impl RespReader {
     fn get_error(&mut self) -> Result<Option<()>, String> {
         let (mut substate, i0) = match self.current_state() {
             Some(&State::GetError(ss, i)) => (ss, i),
-            _ => panic!("Invalid state in get_error"),
+            _ => unreachable!(),
         };
 
         // TODO: return Err("LF before CR".to_string());
@@ -168,7 +168,7 @@ impl RespReader {
     fn get_integer(&mut self) -> Result<Option<()>, String> {
         let mut substate = match self.current_state() {
             Some(&State::GetInteger(s)) => s,
-            _ => panic!("Invalid state in get_integer"),
+            _ => unreachable!(),
         };
 
         if substate == SubState::CheckCR {
@@ -199,7 +199,7 @@ impl RespReader {
     fn get_bulk_string(&mut self) -> Result<Option<()>, String> {
         let (mut substate, mut size) = match self.current_state() {
             Some(&State::GetBulkString(ss, sz)) => (ss, sz),
-            _ => panic!("Invalid state in get_bulk_string"),
+            _ => unreachable!(),
         };
 
         if substate == SubState::GetSize {
@@ -231,7 +231,7 @@ impl RespReader {
     fn get_array(&mut self) -> Result<Option<()>, String> {
         let (mut substate, mut size) = match self.current_state() {
             Some(State::GetArray(ga)) => (ga.substate, ga.size),
-            _ => panic!("Invalid state in get_array"),
+            _ => unreachable!(),
         };
 
         if substate == SubState::GetSize {
@@ -264,7 +264,7 @@ impl RespReader {
             } else {
                 let v = match self.stack.last_mut() {
                     Some(State::GetArray(ga)) => ga.pop_value(),
-                    _ => panic!("Invalid state in get_array"),
+                    _ => unreachable!(),
                 };
                 self.set_value(v);
                 self.stack.pop();
@@ -278,7 +278,7 @@ impl RespReader {
     fn get_array_change<T: FnMut(&mut GetArray)>(&mut self, mut change: T) {
         let state_machine = match self.stack.last_mut() {
             Some(State::GetArray(ga)) => ga,
-            _ => panic!("Invalid state in get_array"),
+            _ => unreachable!(),
         };
         change(state_machine);
     }

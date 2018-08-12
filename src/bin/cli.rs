@@ -74,6 +74,6 @@ fn read(stream: &mut TcpStream) {
         Value::Error(s) => println!("(error) {}", s),
         Value::Integer(i) => println!("(integer) {}", i),
         Value::BulkString(s) => println!("\"{}\"", s),
-        _ => panic!("Unexpected Value type"),
+        _ => unreachable!(),
     }
 }
