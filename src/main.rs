@@ -29,10 +29,14 @@ fn main() {
             .short("p"))
         .get_matches();
 
-    let port = value_t!(matches, "PORT", u16).unwrap_or_else(|_| {
-        println!("Specified port value is invalid, using default 6363.");
+    let port = if matches.is_present("PORT") {
+        value_t!(matches, "PORT", u16).unwrap_or_else(|_| {
+            println!("Specified port value is invalid, using default 6363.");
+            6363
+        })
+    } else {
         6363
-    });
+    };
 
     let address = format!("127.0.0.1:{}", port);
     let data = Arc::new(RwLock::new(HashMap::new()));
