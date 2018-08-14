@@ -41,3 +41,32 @@ impl Value {
         v
     }
 }
+
+impl From<Vec<String>> for Value {
+    fn from(v: Vec<String>) -> Self {
+        let v = v.into_iter().map(|s| Value::BulkString(s)).collect();
+        Value::Array(v)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn vec_to_value() {
+        let v = vec![
+            "SET".to_string(),
+            "hello".to_string(),
+            "world".to_string(),
+        ];
+        let expected = Value::Array(vec![
+            Value::BulkString("SET".to_string()),
+            Value::BulkString("hello".to_string()),
+            Value::BulkString("world".to_string()),
+        ]);
+
+        assert_eq!(Value::from(v), expected);
+    }
+}
