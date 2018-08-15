@@ -111,3 +111,72 @@ fn process_command(data: KvStore, command: Value) -> String {
         },
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    fn init_data() -> KvStore {
+        let mut data = HashMap::new();
+        data.insert("hello".to_string(), "world".to_string().into_bytes());
+        Arc::new(RwLock::new(data))
+    }
+
+    #[test]
+    fn set_command() {
+        let command = vec!["SET".to_string(), "hello".to_string(), "world".to_string()].into();
+        let data = Arc::new(RwLock::new(HashMap::new()));
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_simple_string("OK").unwrap();
+        assert_eq!(response, expected);
+
+        let r = data.read().unwrap();
+        let value = r.get("hello").unwrap();
+        let expected = &"world".to_string().into_bytes();
+        assert_eq!(value, expected);
+    }
+
+    #[test]
+    fn get_command() {
+        let command = vec!["GET".to_string(), "hello".to_string()].into();
+        let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_bulk_string("world");
+        assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn delete_command() {
+        let command = vec!["DELETE".to_string(), "hello".to_string()].into();
+        let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_simple_string("OK").unwrap();
+        assert_eq!(response, expected);
+
+        let command = vec!["DELETE".to_string(), "hello".to_string()].into();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_error("ERROR: Key not found").unwrap();
+        assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn exists_command() {
+        let command = vec!["EXISTS".to_string(), "hello".to_string()].into();
+        let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_integer(1);
+        assert_eq!(response, expected);
+
+        let command = vec!["EXISTS".to_string(), "nonexistent".to_string()].into();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_integer(0);
+        assert_eq!(response, expected);
+    }
+}
