@@ -1,3 +1,6 @@
 
 /target
 **/*.rs.bk
+
+# GitBook build
+/_book
