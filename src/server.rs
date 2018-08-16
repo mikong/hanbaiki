@@ -106,6 +106,12 @@ fn process_command(data: KvStore, command: Value) -> String {
             }
         },
 
+        "DESTROY" if v.len() == 1 => {
+            let mut data = data.write().unwrap();
+            data.clear();
+            RespWriter::to_simple_string("OK").unwrap()
+        },
+
         _ => {
             RespWriter::to_error("ERROR: Command not recognized").unwrap()
         },
@@ -178,5 +184,18 @@ mod test {
         let response = process_command(Arc::clone(&data), command);
         let expected = RespWriter::to_integer(0);
         assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn clearall_command() {
+        let command = vec!["DESTROY".to_string()].into();
+        let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = RespWriter::to_simple_string("OK").unwrap();
+        assert_eq!(response, expected);
+
+        let r = data.read().unwrap();
+        assert_eq!(r.len(), 0);
     }
 }
