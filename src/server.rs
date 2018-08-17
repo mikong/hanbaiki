@@ -9,6 +9,7 @@ use std::sync::{RwLock, Arc};
 
 use respreader::RespReader;
 use respwriter::RespWriter;
+use response::Response;
 use value::Value;
 
 type KvStore = Arc<RwLock<HashMap<String, Vec<u8>>>>;
@@ -50,9 +51,15 @@ fn handle_client(mut stream: TcpStream, data: KvStore) -> io::Result<()> {
                 let command = reader.value;
 
                 let data = Arc::clone(&data);
-                let response = process_command(data, command);
+                match process_command(data, command) {
+                    Response::KeepAlive(response) => write_stream.write(response.as_bytes())?,
+                    Response::Close(response) => {
+                        write_stream.write(response.as_bytes())?;
+                        return Ok(());
+                    },
+                };
 
-                write_stream.write(response.as_bytes())?;
+                
             },
             Err(e) => {
                 println!("{:?}", e);
@@ -62,7 +69,7 @@ fn handle_client(mut stream: TcpStream, data: KvStore) -> io::Result<()> {
     }
 }
 
-fn process_command(data: KvStore, command: Value) -> String {
+fn process_command(data: KvStore, command: Value) -> Response {
     let mut v = match command {
         Value::Array(values) => values,
         _ => panic!("Expected command to be Value::Array"),
@@ -75,45 +82,49 @@ fn process_command(data: KvStore, command: Value) -> String {
         "SET" if v.len() == 3 => {
             let mut data = data.write().unwrap();
             data.insert(v[1].take().to_string(), v[2].take().to_string().into_bytes());
-            RespWriter::to_simple_string("OK").unwrap()
+            Response::ok()
         },
 
         "GET" if v.len() == 2 => {
             let data = data.read().unwrap();
             if let Some(value) = data.get(&v[1].take().to_string()) {
                 let value = String::from_utf8_lossy(value).into_owned();
-                RespWriter::to_bulk_string(&value)
+                Response::KeepAlive(RespWriter::to_bulk_string(&value))
             } else {
-                RespWriter::to_error("ERROR: Key not found").unwrap()
+                Response::error("ERROR: Key not found")
             }
         },
 
         "DELETE" if v.len() == 2 => {
             let mut data = data.write().unwrap();
             if let Some(_) = data.remove(&v[1].take().to_string()) {
-                RespWriter::to_simple_string("OK").unwrap()
+                Response::ok()
             } else {
-                RespWriter::to_error("ERROR: Key not found").unwrap()
+                Response::error("ERROR: Key not found")
             }
         },
 
         "EXISTS" if v.len() == 2 => {
             let data = data.read().unwrap();
             if data.contains_key(&v[1].take().to_string()) {
-                RespWriter::to_integer(1)
+                Response::KeepAlive(RespWriter::to_integer(1))
             } else {
-                RespWriter::to_integer(0)
+                Response::KeepAlive(RespWriter::to_integer(0))
             }
         },
 
         "DESTROY" if v.len() == 1 => {
             let mut data = data.write().unwrap();
             data.clear();
-            RespWriter::to_simple_string("OK").unwrap()
+            Response::ok()
+        },
+
+        "QUIT" | "EXIT" if v.len() == 1 => {
+            Response::close_ok()
         },
 
         _ => {
-            RespWriter::to_error("ERROR: Command not recognized").unwrap()
+            Response::error("ERROR: Command not recognized")
         },
     }
 }
@@ -135,7 +146,7 @@ mod test {
         let data = Arc::new(RwLock::new(HashMap::new()));
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_simple_string("OK").unwrap();
+        let expected = Response::ok();
         assert_eq!(response, expected);
 
         let r = data.read().unwrap();
@@ -150,7 +161,7 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_bulk_string("world");
+        let expected = Response::KeepAlive(RespWriter::to_bulk_string("world"));
         assert_eq!(response, expected);
     }
 
@@ -160,13 +171,13 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_simple_string("OK").unwrap();
+        let expected = Response::ok();
         assert_eq!(response, expected);
 
         let command = vec!["DELETE".to_string(), "hello".to_string()].into();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_error("ERROR: Key not found").unwrap();
+        let expected = Response::error("ERROR: Key not found");
         assert_eq!(response, expected);
     }
 
@@ -176,13 +187,13 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_integer(1);
+        let expected = Response::KeepAlive(RespWriter::to_integer(1));
         assert_eq!(response, expected);
 
         let command = vec!["EXISTS".to_string(), "nonexistent".to_string()].into();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_integer(0);
+        let expected = Response::KeepAlive(RespWriter::to_integer(0));
         assert_eq!(response, expected);
     }
 
@@ -192,10 +203,20 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = RespWriter::to_simple_string("OK").unwrap();
+        let expected = Response::ok();
         assert_eq!(response, expected);
 
         let r = data.read().unwrap();
         assert_eq!(r.len(), 0);
+    }
+
+    #[test]
+    fn quit_command() {
+        let command = vec!["QUIT".to_string()].into();
+        let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::close_ok();
+        assert_eq!(response, expected);
     }
 }
