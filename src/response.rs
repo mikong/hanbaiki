@@ -7,15 +7,15 @@ pub enum Response {
 }
 
 impl Response {
-    pub fn ok() -> Self {
+    pub fn build_ok() -> Self {
         Response::KeepAlive(RespWriter::to_simple_string("OK").unwrap())
     }
 
-    pub fn close_ok() -> Self {
+    pub fn build_close_ok() -> Self {
         Response::Close(RespWriter::to_simple_string("OK").unwrap())
     }
 
-    pub fn error(s: &str) -> Self {
+    pub fn build_error(s: &str) -> Self {
         Response::KeepAlive(RespWriter::to_error(s).unwrap())
     }
 }

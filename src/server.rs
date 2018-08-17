@@ -82,7 +82,7 @@ fn process_command(data: KvStore, command: Value) -> Response {
         "SET" if v.len() == 3 => {
             let mut data = data.write().unwrap();
             data.insert(v[1].take().to_string(), v[2].take().to_string().into_bytes());
-            Response::ok()
+            Response::build_ok()
         },
 
         "GET" if v.len() == 2 => {
@@ -91,16 +91,16 @@ fn process_command(data: KvStore, command: Value) -> Response {
                 let value = String::from_utf8_lossy(value).into_owned();
                 Response::KeepAlive(RespWriter::to_bulk_string(&value))
             } else {
-                Response::error("ERROR: Key not found")
+                Response::build_error("ERROR: Key not found")
             }
         },
 
         "DELETE" if v.len() == 2 => {
             let mut data = data.write().unwrap();
             if let Some(_) = data.remove(&v[1].take().to_string()) {
-                Response::ok()
+                Response::build_ok()
             } else {
-                Response::error("ERROR: Key not found")
+                Response::build_error("ERROR: Key not found")
             }
         },
 
@@ -116,15 +116,15 @@ fn process_command(data: KvStore, command: Value) -> Response {
         "DESTROY" if v.len() == 1 => {
             let mut data = data.write().unwrap();
             data.clear();
-            Response::ok()
+            Response::build_ok()
         },
 
         "QUIT" | "EXIT" if v.len() == 1 => {
-            Response::close_ok()
+            Response::build_close_ok()
         },
 
         _ => {
-            Response::error("ERROR: Command not recognized")
+            Response::build_error("ERROR: Command not recognized")
         },
     }
 }
@@ -146,7 +146,7 @@ mod test {
         let data = Arc::new(RwLock::new(HashMap::new()));
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = Response::ok();
+        let expected = Response::build_ok();
         assert_eq!(response, expected);
 
         let r = data.read().unwrap();
@@ -171,13 +171,13 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = Response::ok();
+        let expected = Response::build_ok();
         assert_eq!(response, expected);
 
         let command = vec!["DELETE".to_string(), "hello".to_string()].into();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = Response::error("ERROR: Key not found");
+        let expected = Response::build_error("ERROR: Key not found");
         assert_eq!(response, expected);
     }
 
@@ -203,7 +203,7 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = Response::ok();
+        let expected = Response::build_ok();
         assert_eq!(response, expected);
 
         let r = data.read().unwrap();
@@ -216,7 +216,7 @@ mod test {
         let data = init_data();
 
         let response = process_command(Arc::clone(&data), command);
-        let expected = Response::close_ok();
+        let expected = Response::build_close_ok();
         assert_eq!(response, expected);
     }
 }
