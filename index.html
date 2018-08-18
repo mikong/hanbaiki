@@ -171,23 +171,24 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="hanbaiki">Hanbaiki</h1>
+                                <h1 id="hanbaiki-&#x8CA9;&#x58F2;&#x6A5F;-">Hanbaiki (&#x8CA9;&#x58F2;&#x6A5F;) <a href="https://travis-ci.org/mikong/hanbaiki" target="_blank"><img src="https://travis-ci.org/mikong/hanbaiki.svg?branch=master" alt="Build Status"></a></h1>
 <p>A simple key-value store written in Rust.</p>
-<p><a href="https://travis-ci.org/mikong/hanbaiki" target="_blank"><img src="https://travis-ci.org/mikong/hanbaiki.svg?branch=master" alt="Build Status"></a></p>
+<p>If you&apos;re interested to know the meaning of the name, see <a href="https://mikong.github.io/hanbaiki/name.html" target="_blank">project name page</a>.</p>
 <h2 id="usage">Usage</h2>
-<p>Warning: This project is still in the pre-alpha stage.</p>
+<p><strong>Warning</strong>: This project is still in the pre-alpha stage.</p>
 <p>Download the source:</p>
 <pre><code>$ git clone git@github.com:mikong/hanbaiki.git
 </code></pre><h3 id="running-the-server">Running the server</h3>
-<pre><code>$ cargo run --bin hanbaiki
+<pre><code>$ ./target/debug/hanbaiki
 listening on 127.0.0.1:6363
 </code></pre><h3 id="running-the-client">Running the client</h3>
-<pre><code>$ cargo run --bin cli
+<pre><code>$ ./target/debug/cli
 &gt; SET hello world
 OK
 &gt; GET hello
 &quot;world&quot;
-</code></pre><h2 id="license">License</h2>
+</code></pre><p>For a work-in-progress list of commands, check the <a href="https://mikong.github.io/hanbaiki/commands.html" target="_blank">commands page</a>.</p>
+<h2 id="license">License</h2>
 <p>This software is distributed under the <a href="https://github.com/mikong/hanbaiki/blob/master/LICENSE" target="_blank">MIT License</a>.</p>
 
                                 
@@ -228,7 +229,7 @@ OK
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Introduction","level":"1.1","depth":1,"next":{"title":"Project Name","level":"1.2","depth":1,"path":"name.md","ref":"name.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"README.md","mtime":"2018-08-17T17:45:34.567Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-17T17:55:32.631Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Introduction","level":"1.1","depth":1,"next":{"title":"Project Name","level":"1.2","depth":1,"path":"name.md","ref":"name.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"README.md","mtime":"2018-08-18T02:38:29.065Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-18T02:45:19.212Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
