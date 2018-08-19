@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>List of Commands · GitBook</title>
+        <title>Client Libraries · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.3">
@@ -57,10 +57,8 @@
     <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
 
     
-    <link rel="next" href="clients.html" />
     
-    
-    <link rel="prev" href="name.html" />
+    <link rel="prev" href="commands.html" />
     
 
     </head>
@@ -115,7 +113,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.3" data-path="commands.html">
+        <li class="chapter " data-level="1.3" data-path="commands.html">
             
                 <a href="commands.html">
             
@@ -128,7 +126,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.4" data-path="clients.html">
+        <li class="chapter active" data-level="1.4" data-path="clients.html">
             
                 <a href="clients.html">
             
@@ -171,7 +169,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href="." >List of Commands</a>
+        <a href="." >Client Libraries</a>
     </h1>
 </div>
 
@@ -186,61 +184,49 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="list-of-commands">List of Commands</h1>
-<h2 id="set-key-value">SET &lt;key&gt; &lt;value&gt;</h2>
-<p>Store string <code>value</code> that can be retrieved by <code>key</code>.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; GET hello
-&quot;world&quot;
-</code></pre><h2 id="get-key">GET &lt;key&gt;</h2>
-<p>Retrieve the string value of the <code>key</code>.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; GET hello
-&quot;world&quot;
-&gt; GET nonexistent
-(error) ERROR: Key not found
-</code></pre><h2 id="delete-key">DELETE &lt;key&gt;</h2>
-<p>Remove the <code>key</code> and its string value from the key-value store.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; DELETE hello
-OK
-&gt; GET hello
-(error) ERROR: Key not found
-&gt; DELETE nonexistent
-(error) ERROR: Key not found
-</code></pre><h2 id="exists-key">EXISTS &lt;key&gt;</h2>
-<p>Checks for the existence of <code>key</code> in the key-value store. Returns 1 if it exists, 0 otherwise.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; EXISTS nonexistent
-(integer) 0
-&gt; SET hello world
-OK
-&gt; EXISTS hello
-(integer) 1
-</code></pre><h2 id="destroy">DESTROY</h2>
-<p>Removes all key-value pairs.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; SET foo bar
-OK
-&gt; DESTROY
-OK
-&gt; GET hello
-(error) ERROR: Key not found
-&gt; GET foo
-(error) ERROR: Key not found
-</code></pre><h2 id="quitexit">QUIT/EXIT</h2>
-<p>Close the TCP connection between client and server.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; QUIT
-OK
+                                <h1 id="client-libraries">Client Libraries</h1>
+<p>Hanbaiki uses the same protocol as Redis for its client-server communication called RESP (REdis Serialization Protocol). See <a href="https://redis.io/topics/protocol" target="_blank">specification</a>. Theoretically, you can use a Redis client or any client that supports the Redis protocol to communicate with a Hanbaiki server.</p>
+<p>Tested Languages:</p>
+<ul>
+<li><a href="#ruby">Ruby</a></li>
+</ul>
+<p>Languages prioritized for testing next:</p>
+<ul>
+<li>Python</li>
+<li>Elixir</li>
+<li>Go</li>
+<li>Java</li>
+</ul>
+<h2 id="notable-differences">Notable Differences</h2>
+<p>If a Redis client cannot accommodate the following differences, it cannot work with Hanbaiki.</p>
+<h3 id="different-port">Different Port</h3>
+<p>The default port of Hanbaiki is 6363 which is different from the default port of Redis, 6379. You should specify the port when establishing a connection when using a Redis client.</p>
+<h3 id="different-commands">Different Commands</h3>
+<p>Hanbaiki has a different set of <a href="commands.html">commands</a> compared to Redis. You&apos;ll need a client that allows you to specify custom commands.</p>
+<h2 id="ruby">Ruby</h2>
+<p><a href="https://github.com/redis/redis-rb" target="_blank">redis-rb</a></p>
+<p>Some Hanbaiki commands such as <code>SET</code> and <code>GET</code> map directly to redis-rb&apos;s methods. For these few cases, you can use the client library&apos;s methods:</p>
+<pre><code>require &apos;redis&apos;
+redis = Redis.new(host: &quot;127.0.0.1&quot;, port: 6363)
+
+redis.set(&quot;hello&quot;, &quot;world&quot;)
+# =&gt; &quot;OK&quot;
+
+redis.get(&quot;hello&quot;)
+# =&gt; &quot;world&quot;
+
+redis.exists(&quot;hello&quot;)
+# =&gt; true
+redis.exists(&quot;world&quot;)
+# =&gt; false
+
+redis.quit
+# =&gt; &quot;OK&quot;
+</code></pre><p>For other commands, you have to use the <code>call</code> method which allows you to specify the Hanbaiki command:</p>
+<pre><code>redis.call(&quot;DELETE&quot;, &quot;hello&quot;)
+# =&gt; &quot;OK&quot;
+redis.call(&quot;DESTROY&quot;)
+# =&gt; &quot;OK&quot;
 </code></pre>
                                 
                                 </section>
@@ -268,14 +254,10 @@ OK
 
             
                 
-                <a href="name.html" class="navigation navigation-prev " aria-label="Previous page: Project Name">
+                <a href="commands.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: List of Commands">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
-                
-                <a href="clients.html" class="navigation navigation-next " aria-label="Next page: Client Libraries">
-                    <i class="fa fa-angle-right"></i>
-                </a>
                 
             
         
@@ -284,7 +266,7 @@ OK
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"List of Commands","level":"1.3","depth":1,"next":{"title":"Client Libraries","level":"1.4","depth":1,"path":"clients.md","ref":"clients.md","articles":[]},"previous":{"title":"Project Name","level":"1.2","depth":1,"path":"name.md","ref":"name.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"commands.md","mtime":"2018-08-19T12:09:24.575Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-19T13:10:10.084Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Client Libraries","level":"1.4","depth":1,"previous":{"title":"List of Commands","level":"1.3","depth":1,"path":"commands.md","ref":"commands.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"clients.md","mtime":"2018-08-19T13:09:38.124Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-19T13:10:10.084Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
