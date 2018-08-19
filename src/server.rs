@@ -75,7 +75,7 @@ fn process_command(data: KvStore, command: Value) -> Response {
         _ => panic!("Expected command to be Value::Array"),
     };
 
-    let command = v[0].take().to_string();
+    let command = v[0].take().to_string().to_ascii_uppercase();
 
     match command.as_ref() {
 
@@ -159,6 +159,22 @@ mod test {
     fn get_command() {
         let command = vec!["GET".to_string(), "hello".to_string()].into();
         let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::KeepAlive(RespWriter::to_bulk_string("world"));
+        assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn lowercase_get_set() {
+        let command = vec!["set".to_string(), "hello".to_string(), "world".to_string()].into();
+        let data = Arc::new(RwLock::new(HashMap::new()));
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::build_ok();
+        assert_eq!(response, expected);
+
+        let command = vec!["get".to_string(), "hello".to_string()].into();
 
         let response = process_command(Arc::clone(&data), command);
         let expected = Response::KeepAlive(RespWriter::to_bulk_string("world"));
