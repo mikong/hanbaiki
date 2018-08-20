@@ -189,11 +189,11 @@
 <p>Tested Languages:</p>
 <ul>
 <li><a href="#ruby">Ruby</a></li>
+<li><a href="#elixir">Elixir</a></li>
 </ul>
 <p>Languages prioritized for testing next:</p>
 <ul>
 <li>Python</li>
-<li>Elixir</li>
 <li>Go</li>
 <li>Java</li>
 </ul>
@@ -227,6 +227,19 @@ redis.quit
 # =&gt; &quot;OK&quot;
 redis.call(&quot;DESTROY&quot;)
 # =&gt; &quot;OK&quot;
+</code></pre><h2 id="elixir">Elixir</h2>
+<p><a href="https://github.com/whatyouhide/redix" target="_blank">redix</a></p>
+<p>Redix doesn&apos;t provide Elixir functions for each Redis command. Instead, it provides a <code>command</code> function that you can use to specify Hanbaiki commands:</p>
+<pre><code>{:ok, conn} = Redix.start_link(host: &quot;127.0.0.1&quot;, port: 6363)
+
+Redix.command(conn, [&quot;SET&quot;, &quot;hello&quot;, &quot;world&quot;])
+#=&gt; {:ok, &quot;OK&quot;}
+
+Redix.command(conn, [&quot;GET&quot;, &quot;hello&quot;])
+#=&gt; {:ok, &quot;world&quot;}
+
+Redix.command(conn, [&quot;EXISTS&quot;, &quot;hello&quot;])
+#=&gt; {:ok, 1}
 </code></pre>
                                 
                                 </section>
@@ -266,7 +279,7 @@ redis.call(&quot;DESTROY&quot;)
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Client Libraries","level":"1.4","depth":1,"previous":{"title":"List of Commands","level":"1.3","depth":1,"path":"commands.md","ref":"commands.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"clients.md","mtime":"2018-08-19T13:09:38.124Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-19T13:10:10.084Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Client Libraries","level":"1.4","depth":1,"previous":{"title":"List of Commands","level":"1.3","depth":1,"path":"commands.md","ref":"commands.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"clients.md","mtime":"2018-08-20T10:55:52.176Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-20T10:56:10.130Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

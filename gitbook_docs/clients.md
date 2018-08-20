@@ -5,11 +5,11 @@ Hanbaiki uses the same protocol as Redis for its client-server communication cal
 Tested Languages:
 
 * [Ruby](#ruby)
+* [Elixir](#elixir)
 
 Languages prioritized for testing next:
 
 * Python
-* Elixir
 * Go
 * Java
 
@@ -57,4 +57,23 @@ redis.call("DELETE", "hello")
 # => "OK"
 redis.call("DESTROY")
 # => "OK"
+```
+
+## Elixir
+
+[redix](https://github.com/whatyouhide/redix)
+
+Redix doesn't provide Elixir functions for each Redis command. Instead, it provides a `command` function that you can use to specify Hanbaiki commands:
+
+```
+{:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 6363)
+
+Redix.command(conn, ["SET", "hello", "world"])
+#=> {:ok, "OK"}
+
+Redix.command(conn, ["GET", "hello"])
+#=> {:ok, "world"}
+
+Redix.command(conn, ["EXISTS", "hello"])
+#=> {:ok, 1}
 ```
