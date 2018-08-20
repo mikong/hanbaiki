@@ -60,6 +60,21 @@ OK
 (integer) 1
 ```
 
+## COUNT
+
+Returns the number of records in the key-value store.
+
+#### Example
+
+```
+> COUNT
+(integer) 0
+> SET hello world
+OK
+> COUNT
+(integer) 1
+```
+
 ## DESTROY
 
 Removes all key-value pairs.
