@@ -113,6 +113,11 @@ fn process_command(data: KvStore, command: Value) -> Response {
             }
         },
 
+        "COUNT" if v.len() == 1 => {
+            let data = data.read().unwrap();
+            Response::KeepAlive(RespWriter::to_integer(data.len()))
+        },
+
         "DESTROY" if v.len() == 1 => {
             let mut data = data.write().unwrap();
             data.clear();
@@ -214,7 +219,17 @@ mod test {
     }
 
     #[test]
-    fn clearall_command() {
+    fn count_command() {
+        let command = vec!["COUNT".to_string()].into();
+        let data = init_data();
+
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::KeepAlive(RespWriter::to_integer(1));
+        assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn destroy_command() {
         let command = vec!["DESTROY".to_string()].into();
         let data = init_data();
 
