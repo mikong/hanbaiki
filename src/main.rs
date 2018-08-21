@@ -4,6 +4,7 @@ extern crate hanbaiki;
 extern crate clap;
 
 use hanbaiki::Server;
+use hanbaiki::Config;
 
 use clap::{App, Arg};
 
@@ -16,18 +17,14 @@ fn main() {
             .takes_value(true)
             .long("port")
             .short("p"))
+        .arg(Arg::with_name("IP")
+            .help("Specify a custom IP to bind to. Default: 127.0.0.1")
+            .takes_value(true)
+            .long("bind")
+            .short("b"))
         .get_matches();
 
-    let port = if matches.is_present("PORT") {
-        value_t!(matches, "PORT", u16).unwrap_or_else(|_| {
-            println!("Specified port value is invalid, using default 6363.");
-            6363
-        })
-    } else {
-        6363
-    };
+    let config = Config::new(matches);
 
-    let address = format!("127.0.0.1:{}", port);
-
-    Server::run(&address);
+    Server::run(config);
 }

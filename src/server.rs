@@ -1,12 +1,12 @@
-use std::fmt::Display;
 use std::io;
 use std::io::Write;
 use std::collections::HashMap;
 
-use std::net::{ToSocketAddrs, TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::thread;
 use std::sync::{RwLock, Arc};
 
+use config::Config;
 use respreader::RespReader;
 use respwriter::RespWriter;
 use response::Response;
@@ -17,11 +17,10 @@ type KvStore = Arc<RwLock<HashMap<String, Vec<u8>>>>;
 pub struct Server;
 
 impl Server {
-    pub fn run<T>(addr: &T)
-        where T: ToSocketAddrs + Display
-    {
+    pub fn run(config: Config) {
         let data = Arc::new(RwLock::new(HashMap::new()));
 
+        let addr = SocketAddr::new(config.ip, config.port);
         let listener = TcpListener::bind(addr).unwrap();
         println!("listening on {}", addr);
 

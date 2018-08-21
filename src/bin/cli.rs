@@ -3,14 +3,14 @@ extern crate hanbaiki;
 #[macro_use]
 extern crate clap;
 
-use std::net::TcpStream;
+use std::net::{TcpStream, IpAddr, SocketAddr};
 use std::io;
 use std::io::{Write};
 
 use hanbaiki::{RespWriter, RespReader};
 use hanbaiki::Value;
 
-use clap::{App, Arg};
+use clap::{App, Arg, ArgMatches, ErrorKind};
 
 fn main() {
     let matches = App::new("Hanbaiki CLI")
@@ -21,24 +21,47 @@ fn main() {
             .takes_value(true)
             .long("port")
             .short("p"))
+        .arg(Arg::with_name("IP")
+            .help("Specify a custom IP to bind to. Default: 127.0.0.1")
+            .takes_value(true)
+            .long("bind")
+            .short("b"))
         .get_matches();
 
-    let port = if matches.is_present("PORT") {
-        value_t!(matches, "PORT", u16).unwrap_or_else(|_| {
-            println!("Specified port value is invalid, using default 6363.");
-            6363
-        })
-    } else {
-        6363
-    };
-
-    let address = format!("127.0.0.1:{}", port);
+    let config = Config::new(matches);
+    let address = SocketAddr::new(config.ip, config.port);
     let mut stream = TcpStream::connect(address)
         .expect("Couldn't connect to the server...");
 
     stream.set_nodelay(true).expect("set_nodelay failed");
 
     start_repl(&mut stream);
+}
+
+#[derive(Debug)]
+struct Config {
+    ip: IpAddr,
+    port: u16,
+}
+
+impl Config {
+    fn new(matches: ArgMatches) -> Self {
+        let port = value_t!(matches, "PORT", u16).unwrap_or_else(|e| {
+            if e.kind == ErrorKind::ValueValidation {
+                println!("Specified port value is invalid, using default 6363.");
+            }
+            6363
+        });
+
+        let ip = value_t!(matches, "IP", IpAddr).unwrap_or_else(|e| {
+            if e.kind == ErrorKind::ValueValidation {
+                println!("Specified IP address is invalid, using default 127.0.0.1.");
+            }
+            "127.0.0.1".parse().unwrap()
+        });
+
+        Config { ip, port }
+    }
 }
 
 fn start_repl(stream: &mut TcpStream) {
