@@ -4,12 +4,12 @@ Hanbaiki uses the same protocol as Redis for its client-server communication cal
 
 Tested Languages:
 
-* [Ruby](#ruby)
 * [Elixir](#elixir)
+* [Python](#python)
+* [Ruby](#ruby)
 
 Languages prioritized for testing next:
 
-* Python
 * Go
 * Java
 
@@ -24,6 +24,54 @@ The default port of Hanbaiki is 6363 which is different from the default port of
 ### Different Commands
 
 Hanbaiki has a different set of [commands](commands.html) compared to Redis. You'll need a client that allows you to specify custom commands.
+
+## Elixir
+
+[redix](https://github.com/whatyouhide/redix)
+
+Redix doesn't provide Elixir functions for each Redis command. Instead, it provides a `command` function that you can use to specify Hanbaiki commands:
+
+```
+{:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 6363)
+
+Redix.command(conn, ["SET", "hello", "world"])
+#=> {:ok, "OK"}
+
+Redix.command(conn, ["GET", "hello"])
+#=> {:ok, "world"}
+
+Redix.command(conn, ["EXISTS", "hello"])
+#=> {:ok, 1}
+```
+
+## Python
+
+[redis-py](https://github.com/andymccurdy/redis-py)
+
+redis-py implements every Redis command so for the few Hanbaiki commands that overlap with Redis, you can use the same methods:
+
+```
+>>> import redis
+>>> r = redis.StrictRedis(host='127.0.0.1', port=6363)
+
+>>> r.set('hello', 'world')
+True
+
+>>> r.get('hello')
+b'world'
+
+>>> r.exists('hello')
+True
+```
+
+For other commands, you can use `execute_command` method to specify the Hanbaiki command:
+
+```
+>>> r.execute_command('COUNT')
+1
+>>> r.execute_command('DESTROY')
+b'OK'
+```
 
 ## Ruby
 
@@ -57,23 +105,4 @@ redis.call("DELETE", "hello")
 # => "OK"
 redis.call("DESTROY")
 # => "OK"
-```
-
-## Elixir
-
-[redix](https://github.com/whatyouhide/redix)
-
-Redix doesn't provide Elixir functions for each Redis command. Instead, it provides a `command` function that you can use to specify Hanbaiki commands:
-
-```
-{:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 6363)
-
-Redix.command(conn, ["SET", "hello", "world"])
-#=> {:ok, "OK"}
-
-Redix.command(conn, ["GET", "hello"])
-#=> {:ok, "world"}
-
-Redix.command(conn, ["EXISTS", "hello"])
-#=> {:ok, 1}
 ```

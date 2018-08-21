@@ -188,12 +188,12 @@
 <p>Hanbaiki uses the same protocol as Redis for its client-server communication called RESP (REdis Serialization Protocol). See <a href="https://redis.io/topics/protocol" target="_blank">specification</a>. Theoretically, you can use a Redis client or any client that supports the Redis protocol to communicate with a Hanbaiki server.</p>
 <p>Tested Languages:</p>
 <ul>
-<li><a href="#ruby">Ruby</a></li>
 <li><a href="#elixir">Elixir</a></li>
+<li><a href="#python">Python</a></li>
+<li><a href="#ruby">Ruby</a></li>
 </ul>
 <p>Languages prioritized for testing next:</p>
 <ul>
-<li>Python</li>
 <li>Go</li>
 <li>Java</li>
 </ul>
@@ -203,7 +203,39 @@
 <p>The default port of Hanbaiki is 6363 which is different from the default port of Redis, 6379. You should specify the port when establishing a connection when using a Redis client.</p>
 <h3 id="different-commands">Different Commands</h3>
 <p>Hanbaiki has a different set of <a href="commands.html">commands</a> compared to Redis. You&apos;ll need a client that allows you to specify custom commands.</p>
-<h2 id="ruby">Ruby</h2>
+<h2 id="elixir">Elixir</h2>
+<p><a href="https://github.com/whatyouhide/redix" target="_blank">redix</a></p>
+<p>Redix doesn&apos;t provide Elixir functions for each Redis command. Instead, it provides a <code>command</code> function that you can use to specify Hanbaiki commands:</p>
+<pre><code>{:ok, conn} = Redix.start_link(host: &quot;127.0.0.1&quot;, port: 6363)
+
+Redix.command(conn, [&quot;SET&quot;, &quot;hello&quot;, &quot;world&quot;])
+#=&gt; {:ok, &quot;OK&quot;}
+
+Redix.command(conn, [&quot;GET&quot;, &quot;hello&quot;])
+#=&gt; {:ok, &quot;world&quot;}
+
+Redix.command(conn, [&quot;EXISTS&quot;, &quot;hello&quot;])
+#=&gt; {:ok, 1}
+</code></pre><h2 id="python">Python</h2>
+<p><a href="https://github.com/andymccurdy/redis-py" target="_blank">redis-py</a></p>
+<p>redis-py implements every Redis command so for the few Hanbaiki commands that overlap with Redis, you can use the same methods:</p>
+<pre><code>&gt;&gt;&gt; import redis
+&gt;&gt;&gt; r = redis.StrictRedis(host=&apos;127.0.0.1&apos;, port=6363)
+
+&gt;&gt;&gt; r.set(&apos;hello&apos;, &apos;world&apos;)
+True
+
+&gt;&gt;&gt; r.get(&apos;hello&apos;)
+b&apos;world&apos;
+
+&gt;&gt;&gt; r.exists(&apos;hello&apos;)
+True
+</code></pre><p>For other commands, you can use <code>execute_command</code> method to specify the Hanbaiki command:</p>
+<pre><code>&gt;&gt;&gt; r.execute_command(&apos;COUNT&apos;)
+1
+&gt;&gt;&gt; r.execute_command(&apos;DESTROY&apos;)
+b&apos;OK&apos;
+</code></pre><h2 id="ruby">Ruby</h2>
 <p><a href="https://github.com/redis/redis-rb" target="_blank">redis-rb</a></p>
 <p>Some Hanbaiki commands such as <code>SET</code> and <code>GET</code> map directly to redis-rb&apos;s methods. For these few cases, you can use the client library&apos;s methods:</p>
 <pre><code>require &apos;redis&apos;
@@ -227,19 +259,6 @@ redis.quit
 # =&gt; &quot;OK&quot;
 redis.call(&quot;DESTROY&quot;)
 # =&gt; &quot;OK&quot;
-</code></pre><h2 id="elixir">Elixir</h2>
-<p><a href="https://github.com/whatyouhide/redix" target="_blank">redix</a></p>
-<p>Redix doesn&apos;t provide Elixir functions for each Redis command. Instead, it provides a <code>command</code> function that you can use to specify Hanbaiki commands:</p>
-<pre><code>{:ok, conn} = Redix.start_link(host: &quot;127.0.0.1&quot;, port: 6363)
-
-Redix.command(conn, [&quot;SET&quot;, &quot;hello&quot;, &quot;world&quot;])
-#=&gt; {:ok, &quot;OK&quot;}
-
-Redix.command(conn, [&quot;GET&quot;, &quot;hello&quot;])
-#=&gt; {:ok, &quot;world&quot;}
-
-Redix.command(conn, [&quot;EXISTS&quot;, &quot;hello&quot;])
-#=&gt; {:ok, 1}
 </code></pre>
                                 
                                 </section>
@@ -279,7 +298,7 @@ Redix.command(conn, [&quot;EXISTS&quot;, &quot;hello&quot;])
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Client Libraries","level":"1.4","depth":1,"previous":{"title":"List of Commands","level":"1.3","depth":1,"path":"commands.md","ref":"commands.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"clients.md","mtime":"2018-08-20T10:55:52.176Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-20T10:56:10.130Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Client Libraries","level":"1.4","depth":1,"previous":{"title":"List of Commands","level":"1.3","depth":1,"path":"commands.md","ref":"commands.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"clients.md","mtime":"2018-08-21T05:22:02.324Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-21T05:25:06.341Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
