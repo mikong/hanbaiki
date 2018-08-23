@@ -74,6 +74,10 @@ fn process_command(data: KvStore, command: Value) -> Response {
         _ => panic!("Expected command to be Value::Array"),
     };
 
+    if v.len() == 0 {
+        return Response::build_error("ERROR: Missing command");
+    }
+
     let command = v[0].take().to_string().to_ascii_uppercase();
 
     match command.as_ref() {

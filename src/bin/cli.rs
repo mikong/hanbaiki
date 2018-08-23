@@ -82,6 +82,8 @@ fn start_repl(stream: &mut TcpStream) {
 fn process_command(command: &str, stream: &mut TcpStream) {
     let v: Vec<&str> = command.split_whitespace().collect();
 
+    if v.len() == 0 { return }
+
     let serialized = RespWriter::to_array(&v);
 
     stream.write_all(serialized.as_bytes())
