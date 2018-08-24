@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>List of Commands · GitBook</title>
+        <title>Configuration · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.3">
@@ -57,10 +57,8 @@
     <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
 
     
-    <link rel="next" href="clients.html" />
     
-    
-    <link rel="prev" href="name.html" />
+    <link rel="prev" href="clients.html" />
     
 
     </head>
@@ -115,7 +113,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.3" data-path="commands.html">
+        <li class="chapter " data-level="1.3" data-path="commands.html">
             
                 <a href="commands.html">
             
@@ -141,7 +139,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.5" data-path="configuration.html">
+        <li class="chapter active" data-level="1.5" data-path="configuration.html">
             
                 <a href="configuration.html">
             
@@ -184,7 +182,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href="." >List of Commands</a>
+        <a href="." >Configuration</a>
     </h1>
 </div>
 
@@ -199,71 +197,23 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="list-of-commands">List of Commands</h1>
-<h2 id="set-key-value">SET &lt;key&gt; &lt;value&gt;</h2>
-<p>Store string <code>value</code> that can be retrieved by <code>key</code>.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; GET hello
-&quot;world&quot;
-</code></pre><h2 id="get-key">GET &lt;key&gt;</h2>
-<p>Retrieve the string value of the <code>key</code>.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; GET hello
-&quot;world&quot;
-&gt; GET nonexistent
-(error) ERROR: Key not found
-</code></pre><h2 id="delete-key">DELETE &lt;key&gt;</h2>
-<p>Remove the <code>key</code> and its string value from the key-value store.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; DELETE hello
-OK
-&gt; GET hello
-(error) ERROR: Key not found
-&gt; DELETE nonexistent
-(error) ERROR: Key not found
-</code></pre><h2 id="exists-key">EXISTS &lt;key&gt;</h2>
-<p>Checks for the existence of <code>key</code> in the key-value store. Returns 1 if it exists, 0 otherwise.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; EXISTS nonexistent
-(integer) 0
-&gt; SET hello world
-OK
-&gt; EXISTS hello
-(integer) 1
-</code></pre><h2 id="count">COUNT</h2>
-<p>Returns the number of records in the key-value store.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; COUNT
-(integer) 0
-&gt; SET hello world
-OK
-&gt; COUNT
-(integer) 1
-</code></pre><h2 id="destroy">DESTROY</h2>
-<p>Removes all key-value pairs.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; SET hello world
-OK
-&gt; SET foo bar
-OK
-&gt; DESTROY
-OK
-&gt; GET hello
-(error) ERROR: Key not found
-&gt; GET foo
-(error) ERROR: Key not found
-</code></pre><h2 id="quitexit">QUIT/EXIT</h2>
-<p>Close the TCP connection between client and server.</p>
-<h4 id="example">Example</h4>
-<pre><code>&gt; QUIT
-OK
-</code></pre>
+                                <h1 id="configuration">Configuration</h1>
+<h2 id="configuration-file">Configuration File</h2>
+<p>TODO</p>
+<h2 id="command-line-options">Command Line Options</h2>
+<dl>
+    <dt><code>-h, --help</code></dt>
+    <dd>Prints help information</dd>
+    <dt><code>-V, --version</code></dt>
+    <dd>Prints version information</dd>
+    <dt><code>-b, --bind &lt;IP&gt;</code></dt>
+    <dd>Specify a custom IP to bind to. Default: 127.0.0.1</dd>
+    <dt><code>-p, --port &lt;PORT&gt;</code></dt>
+    <dd>Specify a custom port. Default: 6363</dd>
+    <dt><code>--pidfile &lt;PIDFILE&gt;</code></dt>
+    <dd>Generate a pidfile at the specified path. Example: /var/run/hanbaiki.pid</dd>
+</dl>
+
                                 
                                 </section>
                             
@@ -290,14 +240,10 @@ OK
 
             
                 
-                <a href="name.html" class="navigation navigation-prev " aria-label="Previous page: Project Name">
+                <a href="clients.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: Client Libraries">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
-                
-                <a href="clients.html" class="navigation navigation-next " aria-label="Next page: Client Libraries">
-                    <i class="fa fa-angle-right"></i>
-                </a>
                 
             
         
@@ -306,7 +252,7 @@ OK
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"List of Commands","level":"1.3","depth":1,"next":{"title":"Client Libraries","level":"1.4","depth":1,"path":"clients.md","ref":"clients.md","articles":[]},"previous":{"title":"Project Name","level":"1.2","depth":1,"path":"name.md","ref":"name.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"commands.md","mtime":"2018-08-24T08:16:59.720Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-24T08:32:46.114Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Configuration","level":"1.5","depth":1,"previous":{"title":"Client Libraries","level":"1.4","depth":1,"path":"clients.md","ref":"clients.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook_docs","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"configuration.md","mtime":"2018-08-24T08:31:03.255Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2018-08-24T08:32:46.114Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
