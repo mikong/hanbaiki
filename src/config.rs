@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::path::PathBuf;
 
 use clap::{ArgMatches, ErrorKind};
 
@@ -6,6 +7,7 @@ use clap::{ArgMatches, ErrorKind};
 pub struct Config {
     pub ip: IpAddr,
     pub port: u16,
+    pub pidfile: Option<PathBuf>
 }
 
 impl Config {
@@ -24,6 +26,10 @@ impl Config {
             "127.0.0.1".parse().unwrap()
         });
 
-        Config { ip, port }
+        let pidfile = matches.value_of("PIDFILE").and_then(|v| {
+            Some(PathBuf::from(v))
+        });
+
+        Config { ip, port, pidfile }
     }
 }

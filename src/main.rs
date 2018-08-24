@@ -22,6 +22,10 @@ fn main() {
             .takes_value(true)
             .long("bind")
             .short("b"))
+        .arg(Arg::with_name("PIDFILE")
+            .help("Generate a pidfile at the specified path. Example: /var/run/hanbaiki.pid")
+            .takes_value(true)
+            .long("pidfile"))
         .get_matches();
 
     let config = Config::new(matches);

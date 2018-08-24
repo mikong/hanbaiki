@@ -2,6 +2,9 @@ use std::io;
 use std::io::Write;
 use std::collections::HashMap;
 
+use std::fs::File;
+use std::path::PathBuf;
+use std::process;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::thread;
 use std::sync::{RwLock, Arc};
@@ -18,6 +21,8 @@ pub struct Server;
 
 impl Server {
     pub fn run(config: Config) {
+        create_pidfile(config.pidfile);
+
         let data = Arc::new(RwLock::new(HashMap::new()));
 
         let addr = SocketAddr::new(config.ip, config.port);
@@ -34,6 +39,17 @@ impl Server {
                 },
                 Err(e) => println!("connection failed: {:?}", e),
             }
+        }
+    }
+}
+
+/// Attempts to create a PID file if the pidfile option was provided.
+///
+/// This function fails silently if it's unable to create or write to the file.
+fn create_pidfile(pidfile: Option<PathBuf>) {
+    if let Some(p) = pidfile {
+        if let Ok(mut f) = File::create(p) {
+            let _ = f.write_all(process::id().to_string().as_bytes());
         }
     }
 }
