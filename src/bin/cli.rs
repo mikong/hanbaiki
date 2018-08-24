@@ -91,6 +91,13 @@ fn process_command(command: &str, stream: &mut TcpStream) {
     stream.flush().expect("Could not flush");
 
     read(stream);
+
+    if v.len() == 1 {
+        let cmd = v[0].to_ascii_uppercase();
+        if cmd == "EXIT" || cmd == "QUIT" {
+            std::process::exit(0);
+        }
+    }
 }
 
 fn read(stream: &mut TcpStream) {
