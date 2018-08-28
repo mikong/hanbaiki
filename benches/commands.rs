@@ -31,15 +31,29 @@ fn random_int() -> Vec<String> {
     v
 }
 
-pub fn set(i: usize, stream: &mut TcpStream) {
-    let v = vec!["SET", &KEYS[i], &VALUES[i]];
-    let serialized = RespWriter::to_array(&v);
+fn send_rcv(command: &Vec<&str>, stream: &mut TcpStream) {
+    let serialized = RespWriter::to_array(&command);
 
     stream.write_all(serialized.as_bytes()).expect("Could not write");
     stream.flush().expect("Could not flush");
 
     let mut buf = vec![0; 40];
-    stream.read(&mut buf).expect("Could not read");
+    stream.read(&mut buf).expect("Could not read");    
+}
+
+fn clear_data(stream: &mut TcpStream) {
+    let v = vec!["DESTROY"];
+    send_rcv(&v, stream);
+}
+
+fn set(i: usize, stream: &mut TcpStream) {
+    let v = vec!["SET", &KEYS[i], &VALUES[i]];
+    send_rcv(&v, stream);
+}
+
+fn get(i: usize, stream: &mut TcpStream) {
+    let v = vec!["GET", &KEYS[i]];
+    send_rcv(&v, stream);
 }
 
 #[cfg(test)]
@@ -53,9 +67,31 @@ mod tests {
             .expect("Couldn't connect to the server...");
         stream.set_nodelay(true).expect("set_nodelay failed");
 
+        clear_data(&mut stream);
+
         b.iter(|| {
             for i in 0..10_000 {
                 set(i, &mut stream);
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_get(b: &mut Bencher) {
+        let mut stream = TcpStream::connect("127.0.0.1:6363")
+            .expect("Couldn't connect to the server...");
+        stream.set_nodelay(true).expect("set_nodelay failed");
+
+        clear_data(&mut stream);
+
+        // setup data
+        for i in 0..10_000 {
+            set(i, &mut stream);
+        }
+
+        b.iter(|| {
+            for i in 0..10_000 {
+                get(i, &mut stream);
             }
         });
     }
