@@ -1,19 +1,24 @@
+#[derive(Debug, PartialEq)]
+pub enum RespError {
+    InvalidData(String),
+}
+
 pub struct RespWriter;
 
 impl RespWriter {
 
-    pub fn to_simple_string(s: &str) -> Result<String, String> {
+    pub fn to_simple_string(s: &str) -> Result<String, RespError> {
         RespWriter::to_simple_message("+", s)
     }
 
-    pub fn to_error(s: &str) -> Result<String, String> {
+    pub fn to_error(s: &str) -> Result<String, RespError> {
         RespWriter::to_simple_message("-", s)
     }
 
-    pub fn to_simple_message(prefix: &str, s: &str) -> Result<String, String> {
+    fn to_simple_message(prefix: &str, s: &str) -> Result<String, RespError> {
 
-        if s.contains("\r\n") {
-            return Err("Contains CRLF".to_string());
+        if s.contains("\r") || s.contains("\n") {
+            return Err(RespError::InvalidData("Contains CR or LF".to_string()));
         }
 
         let msg = format!("{}{}\r\n", prefix, s);
