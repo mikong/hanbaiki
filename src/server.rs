@@ -87,11 +87,18 @@ fn handle_client(mut stream: TcpStream, data: KvStore) -> io::Result<()> {
 fn process_command(data: KvStore, command: Value) -> Response {
     let mut v = match command {
         Value::Array(values) => values,
-        _ => panic!("Expected command to be Value::Array"),
+        _ => return Response::build_error("ERROR: Command must be an array"),
     };
 
     if v.len() == 0 {
         return Response::build_error("ERROR: Missing command");
+    }
+
+    if v.iter().any(|value| match value {
+        Value::BulkString(_) => false,
+        _ => true,
+    }) {
+        return Response::build_error("ERROR: Command must be an array of BulkString");
     }
 
     let command = v[0].take().to_string().to_ascii_uppercase();
@@ -162,6 +169,29 @@ mod test {
         let mut data = HashMap::new();
         data.insert("hello".to_string(), "world".to_string().into_bytes());
         Arc::new(RwLock::new(data))
+    }
+
+    #[test]
+    fn invalid_command() {
+        let data = Arc::new(RwLock::new(HashMap::new()));
+
+        let command = Value::BulkString("DESTROY".to_string());
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::build_error("ERROR: Command must be an array");
+        assert_eq!(response, expected);
+
+        let command = Vec::new().into();
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::build_error("ERROR: Missing command");
+        assert_eq!(response, expected);
+
+        let command = Value::Array(vec![
+            Value::BulkString("EXISTS".to_string()),
+            Value::SimpleString("hello".to_string()),
+        ]);
+        let response = process_command(Arc::clone(&data), command);
+        let expected = Response::build_error("ERROR: Command must be an array of BulkString");
+        assert_eq!(response, expected);
     }
 
     #[test]
