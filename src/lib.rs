@@ -5,6 +5,7 @@ mod config;
 mod respreader;
 mod respwriter;
 mod server;
+pub mod client;
 mod response;
 mod value;
 

@@ -3,14 +3,15 @@ extern crate hanbaiki;
 #[macro_use]
 extern crate clap;
 
-use std::net::{TcpStream, IpAddr, SocketAddr};
+use std::net::{TcpStream, SocketAddr};
 use std::io;
 use std::io::{Write};
 
 use hanbaiki::{RespWriter, RespReader};
 use hanbaiki::Value;
+use hanbaiki::client::config::Config;
 
-use clap::{App, Arg, ArgMatches, ErrorKind};
+use clap::{App, Arg};
 
 fn main() {
     let matches = App::new("Hanbaiki CLI")
@@ -29,6 +30,7 @@ fn main() {
         .get_matches();
 
     let config = Config::new(matches);
+
     let address = SocketAddr::new(config.ip, config.port);
     let mut stream = TcpStream::connect(address)
         .expect("Couldn't connect to the server...");
@@ -36,32 +38,6 @@ fn main() {
     stream.set_nodelay(true).expect("set_nodelay failed");
 
     start_repl(&mut stream);
-}
-
-#[derive(Debug)]
-struct Config {
-    ip: IpAddr,
-    port: u16,
-}
-
-impl Config {
-    fn new(matches: ArgMatches) -> Self {
-        let port = value_t!(matches, "PORT", u16).unwrap_or_else(|e| {
-            if e.kind == ErrorKind::ValueValidation {
-                println!("Specified port value is invalid, using default 6363.");
-            }
-            6363
-        });
-
-        let ip = value_t!(matches, "IP", IpAddr).unwrap_or_else(|e| {
-            if e.kind == ErrorKind::ValueValidation {
-                println!("Specified IP address is invalid, using default 127.0.0.1.");
-            }
-            "127.0.0.1".parse().unwrap()
-        });
-
-        Config { ip, port }
-    }
 }
 
 fn start_repl(stream: &mut TcpStream) {
