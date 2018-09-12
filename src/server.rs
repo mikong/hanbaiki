@@ -26,8 +26,14 @@ impl Server {
         let data = Arc::new(RwLock::new(HashMap::new()));
 
         let addr = SocketAddr::new(config.ip, config.port);
-        let listener = TcpListener::bind(addr).unwrap();
-        println!("listening on {}", addr);
+        let listener = match TcpListener::bind(addr) {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("Couldn't bind to address: {:?}", e);
+                return;
+            }
+        };
+        println!("Listening on {}", addr);
 
         for stream in listener.incoming() {
             match stream {

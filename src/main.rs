@@ -31,4 +31,6 @@ fn main() {
     let config = Config::new(matches);
 
     Server::run(config);
+
+    println!("Exiting");
 }
