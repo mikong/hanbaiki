@@ -2,6 +2,7 @@
 extern crate clap;
 
 mod config;
+pub mod resp_error;
 mod respreader;
 mod respwriter;
 mod server;

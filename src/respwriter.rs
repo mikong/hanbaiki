@@ -1,7 +1,4 @@
-#[derive(Debug, PartialEq)]
-pub enum RespError {
-    InvalidData(String),
-}
+use resp_error::RespError;
 
 pub struct RespWriter;
 
