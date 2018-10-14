@@ -1,3 +1,9 @@
+//! A simple key-value store
+//!
+//! Hanbaiki uses the same protocol as Redis for its client-server communication called RESP (REdis
+//! Serialization Protocol). In practice, you can use any client that supports the Redis protocol to
+//! communicate with a Hanbaiki server.
+
 #[macro_use]
 extern crate clap;
 
