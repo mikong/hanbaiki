@@ -38,7 +38,7 @@ fn send_rcv(command: &Vec<&str>, stream: &mut TcpStream) {
     stream.flush().expect("Could not flush");
 
     let mut buf = vec![0; 40];
-    stream.read(&mut buf).expect("Could not read");    
+    stream.read(&mut buf).expect("Could not read");
 }
 
 fn clear_data(stream: &mut TcpStream) {

@@ -569,7 +569,7 @@ mod test {
     fn check_bulk_string_val() {
         let simple = "$12\r\nHello World!\r\n";
         let v = get_value(simple);
-        assert_eq!(v, Value::BulkString("Hello World!".to_string()));        
+        assert_eq!(v, Value::BulkString("Hello World!".to_string()));
     }
 
     #[test]

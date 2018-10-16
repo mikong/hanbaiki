@@ -7,7 +7,7 @@ use clap::{ArgMatches, ErrorKind};
 pub struct Config {
     pub ip: IpAddr,
     pub port: u16,
-    pub pidfile: Option<PathBuf>
+    pub pidfile: Option<PathBuf>,
 }
 
 impl Config {
@@ -26,9 +26,9 @@ impl Config {
             "127.0.0.1".parse().unwrap()
         });
 
-        let pidfile = matches.value_of("PIDFILE").and_then(|v| {
-            Some(PathBuf::from(v))
-        });
+        let pidfile = matches
+            .value_of("PIDFILE")
+            .and_then(|v| Some(PathBuf::from(v)));
 
         Config { ip, port, pidfile }
     }
