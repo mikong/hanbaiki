@@ -1,6 +1,6 @@
 [package]
 name = "hanbaiki"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["mikong <michaelgalero@gmail.com>", "Mithi Sevilla <mithi.sevilla@gmail.com>"]
 publish = false
 
