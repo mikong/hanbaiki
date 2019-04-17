@@ -4,27 +4,25 @@ A simple key-value store written in Rust.
 
 If you're interested to know the meaning of the name, see [project name page](https://mikong.github.io/hanbaiki/name.html).
 
-## Usage
+## Installation
 
 **Warning**: This project is still in the pre-alpha stage.
 
-Download the source:
+Precompiled binaries are available for Linux, macOS, and Windows in [Releases](https://github.com/mikong/hanbaiki/releases). Simply download and extract the archive to get the binaries for the server (hanbaiki) and interactive client (cli).
 
-```
-$ git clone git@github.com:mikong/hanbaiki.git
-```
+## Usage
 
 ### Running the server
 
 ```
-$ ./target/debug/hanbaiki
+$ ./hanbaiki
 listening on 127.0.0.1:6363
 ```
 
 ### Running the client
 
 ```
-$ ./target/debug/cli
+$ ./cli
 > SET hello world
 OK
 > GET hello
