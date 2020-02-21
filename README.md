@@ -1,8 +1,18 @@
-# Hanbaiki (販売機) [![Build Status][travis-image]][travis]
+<p align="center">
+  <a href="https://mikong.github.io/hanbaiki">
+    <img src="assets/hanbaiki-logo.png" alt="Hanbaiki logo" width="115">
+  </a>
+</p>
 
-A simple key-value store written in Rust.
+<h3 align="center">Hanbaiki (販売機)</h3>
 
-If you're interested to know the meaning of the name, see [project name page](https://mikong.github.io/hanbaiki/name.html).
+<p align="center">
+  <a href="https://travis-ci.org/mikong/hanbaiki"><img src="https://travis-ci.org/mikong/hanbaiki.svg?branch=master" alt="Build Status"></a>
+</p>
+
+<p align="center">
+  A simple key-value store written in Rust.
+</p>
 
 ## Installation
 
@@ -34,6 +44,3 @@ For a work-in-progress list of commands, check the [commands page](https://mikon
 ## License
 
 This software is distributed under the [MIT License](https://github.com/mikong/hanbaiki/blob/master/LICENSE).
-
-[travis-image]: https://travis-ci.org/mikong/hanbaiki.svg?branch=master
-[travis]: https://travis-ci.org/mikong/hanbaiki
