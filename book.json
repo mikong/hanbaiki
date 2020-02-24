@@ -1,3 +1,4 @@
 {
-    "root": "./gitbook_docs"
+    "root": "./gitbook_docs",
+    "plugins": ["-sharing"]
 }
